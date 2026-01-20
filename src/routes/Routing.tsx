@@ -5,6 +5,7 @@ import Protected from "./Protected.tsx";
 import Courses from "../pages/Dashboard/Courses/Courses.tsx";
 import Dashboard from "../pages/Dashboard/Dashboard/Dashboard.tsx";
 import Players from "../pages/Dashboard/Players/Players.tsx";
+import Rounds from "../pages/Dashboard/Rounds/Rounds.tsx";
 
 const Routing = () => {
     return (

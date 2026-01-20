@@ -1,14 +1,19 @@
-.button-primary{
-	height: 40px;
-	color: white;
-	background: #9AE630;
-	border-radius: 5px;
-	border: none;
-	transition: all .3s;
-	cursor: pointer;
+.button-primary {
 
-	&:disabled{
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
+  &.min-100 {
+    min-width: 100px;
+  }
+
+  height: 40px;
+  color: white;
+  background: #9AE630;
+  border-radius: 5px;
+  border: none;
+  transition: all .3s;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }

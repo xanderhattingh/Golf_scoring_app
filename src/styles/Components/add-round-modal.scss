@@ -1,0 +1,270 @@
+@use "modal.scss";
+
+.add-round-modal {
+  min-width: 400px;
+
+  @media screen and (max-width: 500px) {
+    min-width: calc(100dvw - 32px);
+  }
+
+  .step-indicator {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    .step {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.5);
+      padding: 8px 12px;
+      border-radius: 4px;
+
+      &.active {
+        color: white;
+        background-color: rgba(21, 93, 252, 0.3);
+      }
+
+      &.completed {
+        color: #4ade80;
+      }
+    }
+  }
+
+  .step-content {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .search-container {
+    margin-bottom: 16px;
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      background-color: rgba(255, 255, 255, 0.05);
+      color: white;
+      font-size: 14px;
+
+      &::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: #155DFC;
+      }
+    }
+  }
+
+  .selected-info {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .selection-list {
+    flex: 1;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: 16px;
+
+    .selection-item {
+      padding: 12px 16px;
+      color: white;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+
+      &.selected {
+        background-color: rgba(21, 93, 252, 0.3);
+        border-left: 3px solid #155DFC;
+      }
+
+      .handicap-badge {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+    }
+
+    .no-results {
+      padding: 24px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.5);
+    }
+  }
+
+  .add-new-button {
+    width: 100%;
+    margin-top: auto;
+  }
+
+  .handicap-info {
+    margin-bottom: 16px;
+    color: rgba(255, 255, 255, 0.8);
+
+    p {
+      margin: 0;
+    }
+
+    strong {
+      color: #155DFC;
+    }
+  }
+
+  .handicap-list {
+    flex: 1;
+
+    .handicap-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .player-name {
+        color: white;
+        font-size: 16px;
+      }
+
+      .handicap-input {
+        width: 80px;
+        padding: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        background-color: rgba(255, 255, 255, 0.05);
+        color: white;
+        font-size: 14px;
+        text-align: center;
+
+        &:focus {
+          outline: none;
+          border-color: #155DFC;
+        }
+
+        &::-webkit-inner-spin-button,
+        &::-webkit-outer-spin-button {
+          opacity: 1;
+        }
+      }
+    }
+  }
+
+  .scoring-info {
+    margin-bottom: 16px;
+    color: rgba(255, 255, 255, 0.8);
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .scoring-method-list {
+    flex: 1;
+    max-height: 300px;
+    overflow-y: auto;
+
+    .scoring-method-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      &.selected {
+        background-color: rgba(21, 93, 252, 0.15);
+        border-color: #155DFC;
+      }
+
+      .method-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .method-name {
+          color: white;
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        .method-description {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 13px;
+        }
+      }
+
+      .toggle {
+        min-width: 48px;
+        width: 48px;
+        height: 26px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 13px;
+        position: relative;
+        transition: background-color 0.2s ease;
+
+        &.active {
+          background-color: #155DFC;
+        }
+
+        .toggle-knob {
+          width: 22px;
+          height: 22px;
+          background-color: white;
+          border-radius: 50%;
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          transition: transform 0.2s ease;
+        }
+
+        &.active .toggle-knob {
+          transform: translateX(22px);
+        }
+      }
+    }
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
