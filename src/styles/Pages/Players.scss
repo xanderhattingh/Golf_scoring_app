@@ -1,0 +1,13 @@
+.players-container {
+  padding-top: 100px;
+  width: 1250px;
+  @media screen and (max-width: 1300px) {
+    width: calc(100dvw - 32px);
+  }
+  margin: auto;
+
+  .action-buttons {
+    display: flex;
+    justify-content: center;
+  }
+}
