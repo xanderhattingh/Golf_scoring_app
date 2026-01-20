@@ -14,7 +14,7 @@ const Navigation = () => {
                 </div>
                 <div className="right">
                     <NavLink to="/dashboard/courses">Courses</NavLink>
-                    <NavLink to="/players">Players</NavLink>
+                    <NavLink to="/dashboard/players">Players</NavLink>
                     <NavLink to="/rounds">Rounds</NavLink>
                 </div>
 

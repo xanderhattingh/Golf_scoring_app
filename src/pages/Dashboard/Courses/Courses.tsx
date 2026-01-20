@@ -1,12 +1,12 @@
 import {useEffect, useState} from 'react'
-import HttpService from "../../services/HttpService.ts";
+import HttpService from "../../../services/HttpService.ts";
 
 import toast from 'react-simple-toasts';
 import 'react-simple-toasts/dist/style.css';
 import 'react-simple-toasts/dist/theme/failure.css';
 import {HashLoader} from "react-spinners";
-import "../../styles/Pages/Courses.scss"
-import AddCourseModal from "../../components /AddCourseModal.tsx";
+import "../../../styles/Pages/Courses.scss"
+import AddCourseModal from "../../../components /AddCourseModal.tsx";
 
 const Courses = () => {
     const [addCourseModalBool, setAddCourseModalBool] = useState(false);

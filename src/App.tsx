@@ -1,5 +1,3 @@
-import {useContext, useState} from 'react'
-
 import './App.css'
 import Routing from "./routes/Routing.tsx";
 

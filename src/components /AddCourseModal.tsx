@@ -94,7 +94,7 @@ const AddCourseModal = (props) => {
             (error) => {
                 if (error.status === 422) {
                     setLoading(false);
-                    toast('Course already exists', {theme: 'failure', duration: 3000});
+                    toast('Courses already exists', {theme: 'failure', duration: 3000});
                 } else {
                     setLoading(false);
                     toast('Something has gone wrong', {theme: 'failure', duration: 3000});
