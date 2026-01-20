@@ -1,0 +1,41 @@
+@use "modal.scss";
+
+.modal-content {
+  .header {
+    font-size: 20px;
+    color: white;
+    font-family: Roboto, sans-serif;
+  }
+
+  .add-course-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .split {
+      gap: 8px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .course-details {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      @media screen and (max-width: 450px) {
+        grid-template-columns: 100px 1fr;
+      }
+      align-items: center;
+      gap: 40px;
+
+      .label {
+        font-size: 18px;
+        color: white;
+        font-family: Roboto, sans-serif;
+      }
+
+      input[type='file'] {
+        display: none;
+      }
+    }
+  }
+}

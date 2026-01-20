@@ -1,0 +1,14 @@
+.button-primary{
+	height: 40px;
+	color: white;
+	background: #9AE630;
+	border-radius: 5px;
+	border: none;
+	transition: all .3s;
+	cursor: pointer;
+
+	&:disabled{
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+}

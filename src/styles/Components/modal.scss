@@ -1,0 +1,32 @@
+.modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .modal-content {
+    max-height: 80dvh;
+    overflow-y: auto;
+    min-width: 450px;
+    width: 60vw;
+    padding: 40px;
+    @media screen and (max-width: 500px) {
+      min-width: calc(100vw - 32px);
+      width: calc(100vw - 32px);
+      padding: 40px 16px;
+    }
+
+    background: black;
+    border-radius: 10px;
+    box-shadow: 0 8px 16px 0 rgba(255, 255, 255, 0.2), 0 6px 20px 0 rgba(255, 255, 255, 0.19);
+
+    form {
+      margin-top: 40px;
+    }
+  }
+}
