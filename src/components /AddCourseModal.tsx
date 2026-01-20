@@ -21,7 +21,7 @@ const course_schema = z.object({
 })
 
 const AddCourseModal = (props) => {
-    const {onCourseAdded, onCloseModal} = props
+    const {mode = 'add', course, onCourseAdded, onCourseUpdated, onCloseModal} = props
 
     const {
         register: course_form,
@@ -29,8 +29,15 @@ const AddCourseModal = (props) => {
         getValues,
         setValue,
         formState: {isValid},
-        handleSubmit
-    } = useForm({resolver: zodResolver(course_schema)})
+        handleSubmit,
+        reset
+    } = useForm({
+        resolver: zodResolver(course_schema),
+        defaultValues: mode === 'edit' && course ? {
+            course_name: course.name,
+            holes: course.holes
+        } : undefined
+    })
 
     const {fields, append} = useFieldArray({
         control,
@@ -67,10 +74,17 @@ const AddCourseModal = (props) => {
 
 
     useEffect(() => {
-        console.log("use effect called");
-        for (let i = 1; i <= 18; i++) {
-            if (getValues().holes.length < 18) {
-                append({hole_number: i, hole_par: 4, hole_stroke: 0})
+        if (mode === 'edit' && course) {
+            reset({
+                course_name: course.name,
+                holes: course.holes
+            })
+            console.log(getValues());
+        } else {
+            for (let i = 1; i <= 18; i++) {
+                if (getValues().holes?.length < 18 || !getValues().holes) {
+                    append({hole_number: i, hole_par: 4, hole_stroke: 0})
+                }
             }
         }
 
@@ -83,18 +97,26 @@ const AddCourseModal = (props) => {
     const onCreateCourse = async (values) => {
         setLoading(true);
         const apiService = new HttpService();
-        const {request, cancel} = await apiService.post('/add_course', values);
+
+        const endpoint = mode === 'edit' ? '/edit_course' : '/add_course';
+        const payload = mode === 'edit' ? {...values, id: course.id} : values;
+
+        const {request, cancel} = await apiService.post(endpoint, payload);
 
         request.then(
             (response) => {
                 setLoading(false);
-                onCourseAdded(response?.data)
+                if (mode === 'edit') {
+                    onCourseUpdated(response?.data)
+                } else {
+                    onCourseAdded(response?.data)
+                }
 
             },
             (error) => {
                 if (error.status === 422) {
                     setLoading(false);
-                    toast('Courses already exists', {theme: 'failure', duration: 3000});
+                    toast('Course already exists', {theme: 'failure', duration: 3000});
                 } else {
                     setLoading(false);
                     toast('Something has gone wrong', {theme: 'failure', duration: 3000});
@@ -257,7 +279,10 @@ const AddCourseModal = (props) => {
             <>
                 <div className="modal-container">
                     <div className="modal-content">
-                        <div className="header">Course Details</div>
+                        <div className="modal-header">
+                            <div className="header">{mode === 'edit' ? 'Edit Course' : 'Course Details'}</div>
+                            <button type="button" className="close-button" onClick={onCloseModal}>&times;</button>
+                        </div>
                         <form className="add-course-form" onSubmit={handleSubmit(onCreateCourse)}>
                             <InputGroup
                                 label_value="Course Name"
@@ -340,7 +365,8 @@ const AddCourseModal = (props) => {
 
                                 ))
                             }
-                            <button type={'submit'} className="button-primary" disabled={!isValid}>Create Course
+                            <button type={'submit'} className="button-primary" disabled={!isValid}>
+                                {mode === 'edit' ? 'Update Course' : 'Create Course'}
                             </button>
                         </form>
                     </div>

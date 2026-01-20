@@ -6,8 +6,62 @@
   }
   margin: auto;
 
+  .table-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+
+    .table-header {
+      display: flex;
+      background-color: rgba(255, 255, 255, 0.1);
+      font-weight: bold;
+      color: white;
+
+      .table-cell {
+        flex: 1;
+        padding: 12px 16px;
+      }
+    }
+
+    .table-row {
+      display: flex;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+
+      .table-cell {
+        flex: 1;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+      }
+    }
+  }
+
   .action-buttons {
     display: flex;
     justify-content: center;
+  }
+}
+
+.button-secondary {
+  background-color: transparent;
+  border: 1px solid #155DFC;
+  color: #155DFC;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+
+  &:hover {
+    background-color: rgba(21, 93, 252, 0.1);
   }
 }

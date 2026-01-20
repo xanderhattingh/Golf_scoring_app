@@ -1,7 +1,7 @@
 import "../styles/Components/add-course-modal.scss"
 import InputGroup from "./InputGroup.tsx";
 import {z} from "zod";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import HttpService from "../services/HttpService.ts";
@@ -14,25 +14,49 @@ const player_schema = z.object({
 })
 
 const AddPlayerModal = (props) => {
-    const {onPlayerAdded, onCloseModal} = props
+    const {mode = 'add', player, onPlayerAdded, onPlayerUpdated, onCloseModal} = props
 
     const {
         register: player_form,
         formState: {isValid},
-        handleSubmit
-    } = useForm({resolver: zodResolver(player_schema)})
+        handleSubmit,
+        reset
+    } = useForm({
+        resolver: zodResolver(player_schema),
+        defaultValues: mode === 'edit' && player ? {
+            name: player.name,
+            handicap: player.handicap
+        } : undefined
+    })
+
+    useEffect(() => {
+        if (mode === 'edit' && player) {
+            reset({
+                name: player.name,
+                handicap: player.handicap
+            })
+        }
+    }, [mode, player, reset])
 
     const [loading, setLoading] = useState(false);
 
-    const onCreatePlayer = async (values) => {
+    const onSubmitPlayer = async (values) => {
         setLoading(true);
         const apiService = new HttpService();
-        const {request, cancel} = await apiService.post('/add_player', values);
+
+        const endpoint = mode === 'edit' ? '/edit_player' : '/add_player';
+        const payload = mode === 'edit' ? {...values, id: player.id} : values;
+
+        const {request, cancel} = await apiService.post(endpoint, payload);
 
         request.then(
             (response) => {
                 setLoading(false);
-                onPlayerAdded(response?.data)
+                if (mode === 'edit') {
+                    onPlayerUpdated(response?.data)
+                } else {
+                    onPlayerAdded(response?.data)
+                }
 
             },
             (error) => {
@@ -69,8 +93,11 @@ const AddPlayerModal = (props) => {
             <>
                 <div className="modal-container">
                     <div className="modal-content">
-                        <div className="header">Player Details</div>
-                        <form className="add-course-form" onSubmit={handleSubmit(onCreatePlayer)}>
+                        <div className="modal-header">
+                            <div className="header">{mode === 'edit' ? 'Edit Player' : 'Player Details'}</div>
+                            <button type="button" className="close-button" onClick={onCloseModal}>&times;</button>
+                        </div>
+                        <form className="add-course-form" onSubmit={handleSubmit(onSubmitPlayer)}>
                             <InputGroup
                                 label_value="Player Name"
                                 {...player_form("name")}
@@ -83,7 +110,8 @@ const AddPlayerModal = (props) => {
                                 placeholder="Handicap"
                                 type="number"
                             ></InputGroup>
-                            <button type={'submit'} className="button-primary" disabled={!isValid}>Create Player
+                            <button type={'submit'} className="button-primary" disabled={!isValid}>
+                                {mode === 'edit' ? 'Update Player' : 'Create Player'}
                             </button>
                         </form>
                     </div>
