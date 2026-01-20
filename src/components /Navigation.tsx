@@ -15,7 +15,7 @@ const Navigation = () => {
                 <div className="right">
                     <NavLink to="/dashboard/courses">Courses</NavLink>
                     <NavLink to="/dashboard/players">Players</NavLink>
-                    <NavLink to="/rounds">Rounds</NavLink>
+                    <NavLink to="/dashboard/rounds">Rounds</NavLink>
                 </div>
 
             </div>

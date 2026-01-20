@@ -45,7 +45,7 @@ const AddPlayerModal = (props) => {
         const apiService = new HttpService();
 
         const endpoint = mode === 'edit' ? '/edit_player' : '/add_player';
-        const payload = mode === 'edit' ? {...values, id: player.id} : values;
+        const payload = mode === 'edit' ? {...values, player_id: player.id} : values;
 
         const {request, cancel} = await apiService.post(endpoint, payload);
 

@@ -99,7 +99,7 @@ const AddCourseModal = (props) => {
         const apiService = new HttpService();
 
         const endpoint = mode === 'edit' ? '/edit_course' : '/add_course';
-        const payload = mode === 'edit' ? {...values, id: course.id} : values;
+        const payload = mode === 'edit' ? {...values, course_id: course.id} : values;
 
         const {request, cancel} = await apiService.post(endpoint, payload);
 
@@ -344,6 +344,7 @@ const AddCourseModal = (props) => {
                                 fields?.map((field, i) => (
                                     <div key={i} className="split">
                                         <InputGroup
+                                            readOnly={true}
                                             label_value="Hole Number"
                                             {...course_form(`holes.${i}.hole_number`, {valueAsNumber: true})}
                                             placeholder="Hole number"
