@@ -1,19 +1,145 @@
+// Mobile-optimized button styles
+$accent-blue: #3b82f6;
+$accent-green: #10b981;
+$text-primary: #f8fafc;
+
 .button-primary {
+  &.m-left-8 {
+    margin-left: 8px;
+  }
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 14px 24px;
+  color: $text-primary;
+  background: linear-gradient(135deg, $accent-blue 0%, #2563eb 100%);
+  border-radius: 12px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 8px rgba($accent-blue, 0.25);
 
   &.min-100 {
     min-width: 100px;
   }
 
-  height: 40px;
-  color: white;
-  background: #9AE630;
-  border-radius: 5px;
-  border: none;
-  transition: all .3s;
-  cursor: pointer;
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 14px 24px;
+  color: $text-primary;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.button-success {
+  @extend .button-primary;
+  background: linear-gradient(135deg, $accent-green 0%, #059669 100%);
+  box-shadow: 0 2px 8px rgba($accent-green, 0.25);
+}
+
+.button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: $text-primary;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &.m-left-8 {
+    margin-left: 8px;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.button-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+
+  &:active:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
+  }
+}
+
+// Standalone danger button (non-icon)
+button.button-danger:not(.button-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: $text-primary;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
   }
 }

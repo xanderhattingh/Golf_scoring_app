@@ -1,8 +1,9 @@
 import "../styles/Components/add-round-modal.scss"
 import {useEffect, useState} from "react";
-import HttpService from "../services/HttpService.ts";
-import {HashLoader} from "react-spinners";
+import LocalDataService from "../services/LocalDataService.ts";
 import toast from "react-simple-toasts";
+import 'react-simple-toasts/dist/style.css';
+import 'react-simple-toasts/dist/theme/failure.css';
 import AddCourseModal from "./AddCourseModal.tsx";
 import AddPlayerModal from "./AddPlayerModal.tsx";
 
@@ -10,7 +11,6 @@ const AddRoundModal = (props) => {
     const {onRoundCreated, onCloseModal} = props
 
     const [currentStep, setCurrentStep] = useState(1);
-    const [loading, setLoading] = useState(false);
 
     // Step 1: Course selection
     const [courses, setCourses] = useState([]);
@@ -31,25 +31,18 @@ const AddRoundModal = (props) => {
     const [scoringMethods, setScoringMethods] = useState([]);
     const [selectedScoringMethod, setSelectedScoringMethod] = useState(null);
 
+    // Step 5: Format selection
+    const [selectedFormat, setSelectedFormat] = useState<'individual' | 'teams'>('individual');
+    const [teamNames, setTeamNames] = useState<string[]>(['', '']);
+    const [playerAssignments, setPlayerAssignments] = useState<Record<number, number>>({});
+
     // Fetch data on mount
     useEffect(() => {
-        const fetchAddRoundData = async () => {
-            const apiService = new HttpService();
-            const {request} = await apiService.post('/get_create_round_data', {});
-
-            request.then((response) => {
-                setCourses(response.data.courses);
-                setPlayers(response.data.players);
-                setScoringMethods(response.data.scoring_methods);
-
-            }, () => {
-                toast('Could not get data', {theme: 'failure', duration: 3000});
-            }).catch(() => {
-                toast('Could not get data', {theme: 'failure', duration: 3000});
-            })
-        }
-
-        fetchAddRoundData();
+        const dataService = new LocalDataService();
+        const data = dataService.getCreateRoundData();
+        setCourses(data.courses);
+        setPlayers(data.players);
+        setScoringMethods(data.scoring_methods);
     }, []);
 
 
@@ -63,6 +56,16 @@ const AddRoundModal = (props) => {
         }
     }, [currentStep, selectedPlayers]);
 
+    // Reset format when moving to step 5
+    useEffect(() => {
+        if (currentStep === 5) {
+            // Reset format state when entering step 5
+            if (selectedPlayers.length === 3) {
+                setSelectedFormat('individual');
+            }
+        }
+    }, [currentStep, selectedPlayers.length]);
+
     const filteredCourses = courses.filter(course =>
         course.name.toLowerCase().includes(courseSearch.toLowerCase())
     );
@@ -70,6 +73,8 @@ const AddRoundModal = (props) => {
     const filteredPlayers = players.filter(player =>
         player.name.toLowerCase().includes(playerSearch.toLowerCase())
     );
+
+    const canSelectTeams = selectedPlayers.length === 2 || selectedPlayers.length === 4;
 
     const isStep1Valid = selectedCourse !== null;
     const isStep2Valid = selectedPlayers.length >= 1 && selectedPlayers.length <= 4;
@@ -79,6 +84,21 @@ const AddRoundModal = (props) => {
         p.roundHandicap <= 54
     );
     const isStep4Valid = selectedScoringMethod !== null;
+
+    const isStep5Valid = () => {
+        if (selectedFormat === 'individual') return true;
+        if (selectedPlayers.length === 2) {
+            return teamNames[0]?.trim().length > 0;
+        }
+        if (selectedPlayers.length === 4) {
+            const allAssigned = selectedPlayers.every(p => playerAssignments[p.id] !== undefined);
+            const bothNamed = teamNames[0]?.trim().length > 0 && teamNames[1]?.trim().length > 0;
+            const team1Count = Object.values(playerAssignments).filter(t => t === 0).length;
+            const team2Count = Object.values(playerAssignments).filter(t => t === 1).length;
+            return allAssigned && bothNamed && team1Count === 2 && team2Count === 2;
+        }
+        return true;
+    };
 
     const handleCourseSelect = (course) => {
         setSelectedCourse(course);
@@ -126,6 +146,8 @@ const AddRoundModal = (props) => {
             setCurrentStep(3);
         } else if (currentStep === 3 && isStep3Valid) {
             setCurrentStep(4);
+        } else if (currentStep === 4 && isStep4Valid) {
+            setCurrentStep(5);
         }
     }
 
@@ -135,68 +157,64 @@ const AddRoundModal = (props) => {
         }
     }
 
-    const updatePlayerHandicaps = async () => {
-        const apiService = new HttpService();
-        const updatePromises = [];
+    const updatePlayerHandicaps = () => {
+        const dataService = new LocalDataService();
 
         for (const player of playerHandicaps) {
             const originalPlayer = selectedPlayers.find(p => p.id === player.id);
             if (originalPlayer && originalPlayer.handicap !== player.roundHandicap) {
-                const {request} = await apiService.post('/edit_player', {
+                dataService.updatePlayer({
                     player_id: player.id,
                     name: player.name,
                     handicap: player.roundHandicap
                 });
-                updatePromises.push(request);
             }
         }
-
-        return Promise.all(updatePromises);
     }
 
-    const handleCreateRound = async () => {
-        setLoading(true);
-
+    const handleCreateRound = () => {
         try {
-            // First update any changed handicaps
-            await updatePlayerHandicaps();
+            updatePlayerHandicaps();
 
-            // Then create the round
-            const apiService = new HttpService();
-            const roundPayload = {
+            let teamsData: { name: string; playerIds: number[] }[] | undefined;
+            if (selectedFormat === 'teams') {
+                if (selectedPlayers.length === 2) {
+                    teamsData = [{
+                        name: teamNames[0],
+                        playerIds: selectedPlayers.map(p => p.id)
+                    }];
+                } else if (selectedPlayers.length === 4) {
+                    teamsData = [
+                        {
+                            name: teamNames[0],
+                            playerIds: selectedPlayers
+                                .filter(p => playerAssignments[p.id] === 0)
+                                .map(p => p.id)
+                        },
+                        {
+                            name: teamNames[1],
+                            playerIds: selectedPlayers
+                                .filter(p => playerAssignments[p.id] === 1)
+                                .map(p => p.id)
+                        }
+                    ];
+                }
+            }
+
+            const dataService = new LocalDataService();
+            const newRound = dataService.createRound({
                 course_id: selectedCourse.id,
                 player_ids: selectedPlayers.map(p => p.id),
                 scoring_method_id: selectedScoringMethod.id,
-                date: new Date().toISOString().split('T')[0]
-            };
-
-            const {request} = await apiService.post('/create_round', roundPayload);
-
-            request.then(
-                (response) => {
-                    setLoading(false);
-                    onRoundCreated(response?.data);
-                },
-                () => {
-                    setLoading(false);
-                    toast('Failed to create round', {theme: 'failure', duration: 3000});
-                }
-            ).catch(() => {
-                setLoading(false);
-                toast('Something has gone wrong', {theme: 'failure', duration: 3000});
+                date: new Date().toISOString().split('T')[0],
+                format: selectedFormat,
+                teams: teamsData
             });
-        } catch {
-            setLoading(false);
-            toast('Failed to update handicaps', {theme: 'failure', duration: 3000});
-        }
-    }
 
-    if (loading) {
-        return (
-            <div className="login-container">
-                <HashLoader color={"#155DFC"}/>
-            </div>
-        )
+            onRoundCreated(newRound);
+        } catch {
+            toast('Failed to create round', {theme: 'failure', duration: 3000});
+        }
     }
 
     if (showAddCourseModal) {
@@ -224,24 +242,28 @@ const AddRoundModal = (props) => {
             <div className="modal-container">
                 <div className="modal-content add-round-modal">
                     <div className="modal-header">
-                        <div className="header">Create Round - Step {currentStep} of 4</div>
+                        <div className="header">Create Round - Step {currentStep} of 5</div>
                         <button type="button" className="close-button" onClick={onCloseModal}>&times;</button>
                     </div>
 
                     <div className="step-indicator">
                         <div
-                            className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>1.
+                            className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
                             Course
                         </div>
                         <div
-                            className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>2.
+                            className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
                             Players
                         </div>
                         <div
-                            className={`step ${currentStep >= 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}>3.
-                            Handicaps
+                            className={`step ${currentStep >= 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}>
+                            HDC
                         </div>
-                        <div className={`step ${currentStep >= 4 ? 'active' : ''}`}>4. Scoring</div>
+                        <div
+                            className={`step ${currentStep >= 4 ? 'active' : ''} ${currentStep > 4 ? 'completed' : ''}`}>
+                            Method
+                        </div>
+                        <div className={`step ${currentStep >= 5 ? 'active' : ''}`}>Format</div>
                     </div>
 
                     {/* Step 1: Select Course */}
@@ -332,6 +354,8 @@ const AddRoundModal = (props) => {
                                         <span className="player-name">{player.name}</span>
                                         <input
                                             type="number"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             className="handicap-input"
                                             value={player.roundHandicap}
                                             min="0"
@@ -373,6 +397,100 @@ const AddRoundModal = (props) => {
                         </div>
                     )}
 
+                    {/* Step 5: Select Format */}
+                    {currentStep === 5 && (
+                        <div className="step-content">
+                            <div className="format-info">
+                                <p>Select the format for this round</p>
+                            </div>
+
+                            <div className="format-options">
+                                <div
+                                    className={`format-option ${selectedFormat === 'individual' ? 'selected' : ''}`}
+                                    onClick={() => setSelectedFormat('individual')}
+                                >
+                                    <span className="format-name">Individual</span>
+                                    <span className="format-description">Each player plays for themselves</span>
+                                </div>
+
+                                {canSelectTeams && (
+                                    <div
+                                        className={`format-option ${selectedFormat === 'teams' ? 'selected' : ''}`}
+                                        onClick={() => setSelectedFormat('teams')}
+                                    >
+                                        <span className="format-name">Teams</span>
+                                        <span className="format-description">
+                                            {selectedPlayers.length === 2 ? 'Both players on one team' : 'Two teams of 2'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {selectedFormat === 'teams' && selectedPlayers.length === 2 && (
+                                <div className="team-config">
+                                    <label>Team Name</label>
+                                    <input
+                                        type="text"
+                                        value={teamNames[0]}
+                                        onChange={(e) => setTeamNames([e.target.value, ''])}
+                                        placeholder="Enter team name"
+                                    />
+                                </div>
+                            )}
+
+                            {selectedFormat === 'teams' && selectedPlayers.length === 4 && (
+                                <div className="team-config">
+                                    <div className="team-setup">
+                                        <div className="team">
+                                            <input
+                                                type="text"
+                                                value={teamNames[0]}
+                                                onChange={(e) => setTeamNames([e.target.value, teamNames[1]])}
+                                                placeholder="Team 1 name"
+                                            />
+                                            {selectedPlayers.map(player => (
+                                                <div key={player.id} className="player-assignment">
+                                                    <input
+                                                        type="radio"
+                                                        name={`player-${player.id}`}
+                                                        checked={playerAssignments[player.id] === 0}
+                                                        onChange={() => setPlayerAssignments({
+                                                            ...playerAssignments,
+                                                            [player.id]: 0
+                                                        })}
+                                                    />
+                                                    <span>{player.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="team">
+                                            <input
+                                                type="text"
+                                                value={teamNames[1]}
+                                                onChange={(e) => setTeamNames([teamNames[0], e.target.value])}
+                                                placeholder="Team 2 name"
+                                            />
+                                            {selectedPlayers.map(player => (
+                                                <div key={player.id} className="player-assignment">
+                                                    <input
+                                                        type="radio"
+                                                        name={`player-${player.id}`}
+                                                        checked={playerAssignments[player.id] === 1}
+                                                        onChange={() => setPlayerAssignments({
+                                                            ...playerAssignments,
+                                                            [player.id]: 1
+                                                        })}
+                                                    />
+                                                    <span>{player.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="modal-actions">
                         {currentStep > 1 && (
                             <button
@@ -383,14 +501,15 @@ const AddRoundModal = (props) => {
                                 Back
                             </button>
                         )}
-                        {currentStep < 4 ? (
+                        {currentStep < 5 ? (
                             <button
                                 type="button"
                                 className="button-primary min-100"
                                 disabled={
                                     (currentStep === 1 && !isStep1Valid) ||
                                     (currentStep === 2 && !isStep2Valid) ||
-                                    (currentStep === 3 && !isStep3Valid)
+                                    (currentStep === 3 && !isStep3Valid) ||
+                                    (currentStep === 4 && !isStep4Valid)
                                 }
                                 onClick={handleNextStep}
                             >
@@ -400,7 +519,7 @@ const AddRoundModal = (props) => {
                             <button
                                 type="button"
                                 className="button-primary"
-                                disabled={!isStep4Valid}
+                                disabled={!isStep5Valid()}
                                 onClick={handleCreateRound}
                             >
                                 Create Round

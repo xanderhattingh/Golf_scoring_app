@@ -1,5 +1,3 @@
-import React from 'react'
-
 const InputLabel = (props) => {
 	const { label_value } = props;
 	return (

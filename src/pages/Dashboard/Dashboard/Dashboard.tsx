@@ -2,7 +2,7 @@ import {useState} from 'react'
 import {Outlet} from "react-router-dom";
 import {UserContext} from "../../../Contexts/UserContext.ts";
 import StorageService from "../../../services/StorageService.ts";
-import Navigation from "../../../components /Navigation.tsx";
+import Navigation from "../../../components/Navigation.tsx";
 
 import "../../../styles/Components/navigation.scss"
 

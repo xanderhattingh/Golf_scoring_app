@@ -6,6 +6,7 @@ import Courses from "../pages/Dashboard/Courses/Courses.tsx";
 import Dashboard from "../pages/Dashboard/Dashboard/Dashboard.tsx";
 import Players from "../pages/Dashboard/Players/Players.tsx";
 import Rounds from "../pages/Dashboard/Rounds/Rounds.tsx";
+import RoundDetail from "../pages/Dashboard/Rounds/RoundDetail.tsx";
 
 const Routing = () => {
     return (
@@ -21,6 +22,7 @@ const Routing = () => {
                         <Route path="/dashboard/players" element={<Players/>}></Route>
                         <Route path="/dashboard/rounds" element={<Rounds/>}></Route>
                     </Route>
+                    <Route path="/round/:id" element={<RoundDetail/>}/>
                 </Route>
             </Routes>
         </>

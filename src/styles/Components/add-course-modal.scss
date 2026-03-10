@@ -40,7 +40,80 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .bulk-input-section {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 8px;
+
+      .bulk-input-header {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 12px;
+        font-family: Roboto, sans-serif;
+      }
+
+      .bulk-error {
+        color: #ff6b6b;
+        font-size: 13px;
+        margin-bottom: 12px;
+        font-family: Roboto, sans-serif;
+      }
+
+      .bulk-input-row {
+        display: grid;
+        grid-template-columns: 65% 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        .bulk-input {
+          flex: 1;
+          padding: 10px 12px;
+          border-radius: 6px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          font-size: 14px;
+          font-family: Roboto, sans-serif;
+
+          &::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+          }
+
+          &:focus {
+            outline: none;
+            border-color: #155DFC;
+          }
+        }
+
+        .bulk-apply-btn {
+          width: 100%;
+          padding: 10px 16px;
+          border-radius: 6px;
+          border: none;
+          background: #155DFC;
+          color: white;
+          font-size: 14px;
+          font-family: Roboto, sans-serif;
+          cursor: pointer;
+          transition: background 0.2s;
+
+          &:hover {
+            background: #1249cc;
+          }
+        }
+      }
+    }
+
     .course-details {
+      &.margin-t-20 {
+        margin-top: 20px;
+      }
+
       display: grid;
       grid-template-columns: 180px 1fr;
       @media screen and (max-width: 450px) {

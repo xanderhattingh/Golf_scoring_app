@@ -1,0 +1,493 @@
+// Mobile-first golf scoring interface
+// Designed for outdoor use on the course
+
+$bg-dark: #0f1419;
+$bg-card: #1a2332;
+$bg-input: #232f3e;
+$accent-green: #10b981;
+$accent-blue: #3b82f6;
+$accent-yellow: #f59e0b;
+$accent-red: #ef4444;
+$text-primary: #f8fafc;
+$text-secondary: #94a3b8;
+$text-muted: #64748b;
+
+.round-detail-container {
+  min-height: 100dvh;
+  background: $bg-dark;
+  padding: 0;
+  padding-bottom: 100px; // Space for fixed button
+
+  .loading {
+    color: $text-primary;
+    text-align: center;
+    padding: 100px 20px;
+    font-size: 18px;
+  }
+
+  // Compact header
+  .round-header {
+    background: $bg-card;
+    padding: 16px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+    .back-button {
+      background: none;
+      border: none;
+      color: $accent-blue;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .round-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+
+      h2 {
+        color: $text-primary;
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .scoring-method,
+      .format-badge {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 500;
+      }
+
+      .scoring-method {
+        color: $text-secondary;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .format-badge {
+        color: $accent-blue;
+        background: rgba($accent-blue, 0.15);
+      }
+    }
+  }
+
+  // Match status - collapsible summary at top
+  .status-section {
+    background: $bg-card;
+    margin: 12px;
+    border-radius: 16px;
+    padding: 20px;
+
+    .status-title {
+      font-size: 11px;
+      color: $text-muted;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      font-weight: 600;
+
+      &.margin-t-20 {
+        margin-top: 20px;
+      }
+    }
+
+    .status-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: $text-primary;
+      line-height: 1.2;
+
+      &.leading {
+        color: $accent-green;
+      }
+
+      &.trailing {
+        color: $accent-red;
+      }
+    }
+
+    .match-status {
+      text-align: center;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .previous-hole-result {
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+      text-align: center;
+
+      .result-title {
+        font-size: 11px;
+        color: $text-muted;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+      }
+
+      .result-value {
+        font-size: 15px;
+        font-weight: 600;
+
+        &.won {
+          color: $accent-green;
+        }
+
+        &.halved {
+          color: $accent-yellow;
+        }
+      }
+    }
+
+    .holes-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+      .team-holes {
+        text-align: center;
+        flex: 1;
+
+        .team-name {
+          display: block;
+          font-size: 13px;
+          color: $text-secondary;
+          margin-bottom: 4px;
+        }
+
+        .holes-won {
+          display: block;
+          font-size: 22px;
+          font-weight: 700;
+          color: $accent-green;
+        }
+      }
+
+      .halved-holes {
+        text-align: center;
+        padding: 0 12px;
+
+        span {
+          font-size: 13px;
+          color: $accent-yellow;
+          background: rgba($accent-yellow, 0.15);
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-weight: 500;
+        }
+      }
+    }
+
+    .team-points-totals {
+      text-align: center;
+    }
+
+    .team-scores,
+    .player-scores {
+      &.margin-t-20 {
+        margin-top: 20px;
+      }
+
+      display: flex;
+      justify-content: space-around;
+      gap: 16px;
+
+      .score-item {
+        text-align: center;
+        flex: 1;
+
+        .name {
+          display: block;
+          font-size: 13px;
+          color: $text-secondary;
+          margin-bottom: 6px;
+        }
+
+        .value {
+          display: block;
+          font-size: 28px;
+          font-weight: 700;
+          color: $text-primary;
+        }
+      }
+    }
+  }
+
+  // Current hole - main scoring area
+  .current-hole-section {
+    background: $bg-card;
+    margin: 12px;
+    border-radius: 16px;
+    padding: 20px;
+
+    // Large hole selector for easy navigation
+    .hole-selector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 20px;
+
+      button {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: $bg-input;
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        color: $text-primary;
+        cursor: pointer;
+        font-size: 24px;
+        font-weight: bold;
+        transition: all 0.15s ease;
+        -webkit-tap-highlight-color: transparent;
+
+        &:active:not(:disabled) {
+          transform: scale(0.95);
+          background: rgba(255, 255, 255, 0.15);
+        }
+
+        &:disabled {
+          opacity: 0.25;
+          cursor: not-allowed;
+        }
+      }
+
+      span {
+        font-size: 36px;
+        font-weight: 700;
+        color: $text-primary;
+        min-width: 140px;
+        text-align: center;
+      }
+    }
+
+    // Par and stroke index badges
+    .hole-info {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+
+      span {
+        font-size: 15px;
+        font-weight: 600;
+        color: $text-primary;
+        background: $bg-input;
+        padding: 10px 20px;
+        border-radius: 12px;
+      }
+    }
+
+    // Score input area - optimized for touch
+    .score-inputs {
+      margin-bottom: 20px;
+
+      .team-group {
+        margin-bottom: 20px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        h4 {
+          color: $accent-blue;
+          margin: 0 0 12px 0;
+          font-size: 14px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      }
+
+      .player-score-input {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        grid-template-rows: auto auto;
+        gap: 8px 12px;
+        padding: 16px;
+        background: $bg-input;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        align-items: center;
+
+        .number-picker-trigger {
+          grid-row: 1/span 2;
+        }
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        .player-name {
+          color: $text-primary;
+          font-size: 17px;
+          font-weight: 600;
+          grid-column: 1;
+          grid-row: 1;
+        }
+
+        .player-handicap {
+          font-size: 12px;
+          color: $text-muted;
+          grid-column: 1;
+          grid-row: 2;
+        }
+
+        input {
+          grid-column: 2;
+          grid-row: 1 / 3;
+          width: 72px;
+          height: 60px;
+          padding: 0;
+          border: 2px solid rgba(255, 255, 255, 0.15);
+          border-radius: 12px;
+          background: $bg-dark;
+          color: $text-primary;
+          font-size: 28px;
+          font-weight: 700;
+          text-align: center;
+          -webkit-appearance: none;
+          -moz-appearance: textfield;
+
+          &:focus {
+            outline: none;
+            border-color: $accent-blue;
+            background: rgba($accent-blue, 0.1);
+          }
+
+          &::-webkit-inner-spin-button,
+          &::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+          }
+        }
+
+        .points-display {
+          grid-column: 3;
+          grid-row: 1 / 3;
+          min-width: 56px;
+          height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba($accent-green, 0.15);
+          border-radius: 12px;
+          color: $accent-green;
+          font-weight: 700;
+          font-size: 18px;
+        }
+      }
+    }
+
+    .submit-hole {
+      display: none; // Hidden - using fixed button instead
+    }
+  }
+
+  // Fixed bottom action button
+  .fixed-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 20px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, $bg-dark 80%, transparent);
+    z-index: 100;
+  }
+
+  .button-primary {
+    width: 100%;
+    background: linear-gradient(135deg, $accent-blue 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    padding: 18px 24px;
+    border-radius: 14px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 4px 12px rgba($accent-blue, 0.3);
+
+    &:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+  }
+
+  .finish-button {
+    width: 100%;
+    background: linear-gradient(135deg, $accent-green 0%, #059669 100%) !important;
+    box-shadow: 0 4px 12px rgba($accent-green, 0.3) !important;
+  }
+}
+
+// Tablet and desktop adjustments
+@media screen and (min-width: 768px) {
+  .round-detail-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding-top: 20px;
+
+    .round-header {
+      border-radius: 16px;
+      margin: 12px;
+      position: relative;
+    }
+
+    .current-hole-section {
+      .score-inputs {
+        .player-score-input {
+          grid-template-columns: 1fr auto auto auto;
+          grid-template-rows: 1fr;
+
+          .player-name {
+            grid-row: 1;
+          }
+
+
+          .player-handicap {
+            grid-column: 2;
+            grid-row: 1;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 8px 12px;
+            border-radius: 8px;
+          }
+
+          input {
+            grid-column: 3;
+            grid-row: 1;
+          }
+
+          .points-display {
+            grid-column: 4;
+            grid-row: 1;
+          }
+        }
+      }
+    }
+  }
+}

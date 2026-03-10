@@ -1,41 +1,22 @@
 import {useEffect, useState} from 'react'
-import HttpService from "../../../services/HttpService.ts";
+import {useNavigate} from 'react-router-dom';
+import {jsPDF} from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import LocalDataService from "../../../services/LocalDataService.ts";
+import type {Round} from "../../../services/LocalDataService.ts";
 
-import toast from 'react-simple-toasts';
-import 'react-simple-toasts/dist/style.css';
-import 'react-simple-toasts/dist/theme/failure.css';
-import {HashLoader} from "react-spinners";
 import "../../../styles/Pages/Rounds.scss"
-import AddRoundModal from "../../../components /AddRoundModal.tsx";
+import AddRoundModal from "../../../components/AddRoundModal.tsx";
 
 const Rounds = () => {
+    const navigate = useNavigate();
     const [rounds, setRounds] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [showRoundModal, setShowRoundModal] = useState(false);
+    const [roundToDelete, setRoundToDelete] = useState<Round | null>(null);
 
     useEffect(() => {
-        const getRounds = async () => {
-            setRounds([]);
-            const apiService = new HttpService();
-            const {request} = await apiService.post('/get_rounds', {});
-
-            request.then((response) => {
-                console.log(response);
-                setLoading(false);
-                setRounds(response.data);
-            }, () => {
-                setLoading(false);
-                toast('Could not get the rounds', {theme: 'failure', duration: 3000});
-            }).catch(() => {
-                setLoading(false);
-                toast('Could not get the rounds', {theme: 'failure', duration: 3000});
-            })
-
-
-        }
-
-        getRounds()
-
+        const dataService = new LocalDataService();
+        setRounds(dataService.getRounds());
     }, []);
 
     const handleAddRoundClick = () => {
@@ -47,22 +28,37 @@ const Rounds = () => {
     }
 
     const handleRoundCreated = ($event) => {
-        console.log($event);
         setRounds((old) => [...old, $event]);
         setShowRoundModal(false);
+        navigate(`/round/${$event.id}`);
     }
 
     const handleViewRoundClick = (round) => {
-        console.log('View round:', round);
-        // TODO: Navigate to round details or open view modal
+        navigate(`/round/${round.id}`);
     }
 
     const handleEditRoundClick = (round) => {
-        console.log('Edit round:', round);
-        // TODO: Navigate to round edit or open edit modal
+        navigate(`/round/${round.id}`);
     }
 
-    const formatDate = (dateString) => {
+    const handleDeleteClick = (round: Round) => {
+        setRoundToDelete(round);
+    }
+
+    const handleConfirmDelete = () => {
+        if (roundToDelete) {
+            const dataService = new LocalDataService();
+            dataService.deleteRound(roundToDelete.id);
+            setRounds((old) => old.filter((r) => r.id !== roundToDelete.id));
+            setRoundToDelete(null);
+        }
+    }
+
+    const handleCancelDelete = () => {
+        setRoundToDelete(null);
+    }
+
+    const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
@@ -70,51 +66,371 @@ const Rounds = () => {
         });
     }
 
-    if (loading) {
-        return (
-            <div className="login-container">
-                <HashLoader color={"#155DFC"}/>
-            </div>
-        )
-    } else {
+    const handleExportRound = (round: Round) => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
 
-        return (
-            <>
-                <div className="rounds-container">
-                    <div className="table-container">
-                        <div className="table-header">
-                            <div className="table-cell">Course</div>
-                            <div className="table-cell">Date</div>
-                            <div className="table-cell">Actions</div>
-                        </div>
-                        {rounds.map((round, index) => (
-                            <div key={index} className="table-row">
-                                <div className="table-cell">{round.course.name}</div>
-                                <div className="table-cell">{formatDate(round.date)}</div>
-                                <div className="table-cell">
-                                    {round.completed ? (
-                                        <button className="button-secondary"
-                                                onClick={() => handleViewRoundClick(round)}>View</button>
-                                    ) : (
-                                        <button className="button-secondary"
-                                                onClick={() => handleEditRoundClick(round)}>Edit</button>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
+        // Title
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Golf Scorecard', pageWidth / 2, 20, {align: 'center'});
+
+        // Round info
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Course: ${round.course.name}`, 14, 35);
+        doc.text(`Date: ${formatDate(round.date)}`, 14, 42);
+        doc.text(`Format: ${round.format === 'teams' ? 'Teams' : 'Individual'}`, 14, 49);
+        doc.text(`Scoring: ${round.scoring_method.name}`, 14, 56);
+
+        // Players
+        const playerNames = round.players.map(p => `${p.name} (HC: ${p.handicap})`).join(', ');
+        doc.text(`Players: ${playerNames}`, 14, 63);
+
+        // Teams (if applicable)
+        if (round.format === 'teams' && round.teams) {
+            const teamInfo = round.teams.map(t => {
+                const members = t.playerIds.map(pid => round.players.find(p => p.id === pid)?.name).join(' & ');
+                return `${t.name}: ${members}`;
+            }).join(' | ');
+            doc.text(`Teams: ${teamInfo}`, 14, 70);
+        }
+
+        // Calculate player totals
+        const playerTotals: Record<number, { strokes: number; points: number }> = {};
+        round.players.forEach(p => {
+            playerTotals[p.id] = {strokes: 0, points: 0};
+        });
+        round.scores.forEach(holeScore => {
+            holeScore.playerScores.forEach(ps => {
+                if (playerTotals[ps.playerId]) {
+                    playerTotals[ps.playerId].strokes += ps.strokes;
+                    playerTotals[ps.playerId].points += ps.points;
+                }
+            });
+        });
+
+        // Summary table
+        const summaryStartY = round.format === 'teams' ? 80 : 73;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Summary', 14, summaryStartY);
+
+        const summaryHeaders = ['Player', 'Handicap', 'Total Strokes', 'Total Points'];
+        const summaryData = round.players.map(p => [
+            p.name,
+            p.handicap.toString(),
+            playerTotals[p.id].strokes.toString(),
+            playerTotals[p.id].points.toString()
+        ]);
+
+        autoTable(doc, {
+            startY: summaryStartY + 5,
+            head: [summaryHeaders],
+            body: summaryData,
+            theme: 'striped',
+            headStyles: {fillColor: [59, 130, 246]},
+            margin: {left: 14, right: 14}
+        });
+
+        // Helper to get hole winner for team matches
+        const getHoleWinner = (holeNumber: number): { winner: string; team1Best: number; team2Best: number } => {
+            if (!round.teams || round.teams.length < 2) {
+                return {winner: '-', team1Best: 0, team2Best: 0};
+            }
+            const holeScore = round.scores.find(s => s.holeNumber === holeNumber);
+            if (!holeScore) return {winner: '-', team1Best: 0, team2Best: 0};
+
+            const team1Best = Math.max(
+                ...round.teams[0].playerIds.map(pid => {
+                    const ps = holeScore.playerScores.find(p => p.playerId === pid);
+                    return ps?.points || 0;
+                })
+            );
+            const team2Best = Math.max(
+                ...round.teams[1].playerIds.map(pid => {
+                    const ps = holeScore.playerScores.find(p => p.playerId === pid);
+                    return ps?.points || 0;
+                })
+            );
+
+            if (team1Best > team2Best) return {winner: round.teams[0].name, team1Best, team2Best};
+            if (team2Best > team1Best) return {winner: round.teams[1].name, team1Best, team2Best};
+            return {winner: 'Halved', team1Best, team2Best};
+        };
+
+        // Team Match Results (if team format)
+        // @ts-expect-error autoTable adds lastAutoTable to doc
+        let scorecardStartY = doc.lastAutoTable.finalY + 15;
+
+        if (round.format === 'teams' && round.teams && round.teams.length === 2) {
+            // Calculate team results
+            let team1Wins = 0;
+            let team2Wins = 0;
+            let halved = 0;
+
+            for (let h = 1; h <= 18; h++) {
+                const result = getHoleWinner(h);
+                if (result.winner === round.teams[0].name) team1Wins++;
+                else if (result.winner === round.teams[1].name) team2Wins++;
+                else if (result.winner === 'Halved') halved++;
+            }
+
+            const diff = team1Wins - team2Wins;
+            let matchResult = 'All Square';
+            if (diff > 0) {
+                matchResult = `${round.teams[0].name} wins ${diff} up`;
+            } else if (diff < 0) {
+                matchResult = `${round.teams[1].name} wins ${Math.abs(diff)} up`;
+            }
+
+            // @ts-expect-error autoTable adds lastAutoTable to doc
+            const teamResultsY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Match Result', 14, teamResultsY);
+
+            autoTable(doc, {
+                startY: teamResultsY + 5,
+                head: [['Team', 'Holes Won', 'Holes Halved', 'Result']],
+                body: [
+                    [round.teams[0].name, team1Wins.toString(), halved.toString(), diff > 0 ? 'WINNER' : (diff === 0 ? 'DRAW' : '')],
+                    [round.teams[1].name, team2Wins.toString(), halved.toString(), diff < 0 ? 'WINNER' : (diff === 0 ? 'DRAW' : '')]
+                ],
+                theme: 'striped',
+                headStyles: {fillColor: [16, 185, 129]},
+                margin: {left: 14, right: 14},
+                didParseCell: (data) => {
+                    if (data.column.index === 3 && data.cell.raw === 'WINNER') {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [16, 185, 129];
+                    }
+                }
+            });
+
+            // Overall match result
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            // @ts-expect-error autoTable adds lastAutoTable to doc
+            doc.text(`Final Result: ${matchResult}`, 14, doc.lastAutoTable.finalY + 10);
+
+            // @ts-expect-error autoTable adds lastAutoTable to doc
+            scorecardStartY = doc.lastAutoTable.finalY + 20;
+        }
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Scorecard - Front 9', 14, scorecardStartY);
+
+        // Sort scores by hole number
+        const sortedScores = [...round.scores].sort((a, b) => a.holeNumber - b.holeNumber);
+
+        // Helper to build scorecard for a range of holes
+        const buildScorecardData = (startHole: number, endHole: number) => {
+            // Headers: blank + hole numbers + Out/In total
+            const headers = [''];
+            for (let h = startHole; h <= endHole; h++) {
+                headers.push(h.toString());
+            }
+            headers.push(startHole === 1 ? 'Out' : 'In');
+
+            // Par row
+            let parTotal = 0;
+            const parRow = ['Par'];
+            for (let h = startHole; h <= endHole; h++) {
+                const holeData = round.course.holes.find(hole => hole.hole_number === h);
+                const par = holeData?.hole_par || 0;
+                parTotal += par;
+                parRow.push(par.toString());
+            }
+            parRow.push(parTotal.toString());
+
+            // SI row
+            const siRow = ['SI'];
+            for (let h = startHole; h <= endHole; h++) {
+                const holeData = round.course.holes.find(hole => hole.hole_number === h);
+                siRow.push(holeData?.hole_stroke.toString() || '-');
+            }
+            siRow.push('-');
+
+            // Player rows (strokes and points for each)
+            const playerRows: string[][] = [];
+            round.players.forEach(p => {
+                let strokesTotal = 0;
+                let pointsTotal = 0;
+                const strokesRow = [`${p.name}`];
+                const pointsRow = [`${p.name} Pts`];
+
+                for (let h = startHole; h <= endHole; h++) {
+                    const holeScore = sortedScores.find(s => s.holeNumber === h);
+                    const ps = holeScore?.playerScores.find(s => s.playerId === p.id);
+                    const strokes = ps?.strokes || 0;
+                    const points = ps?.points || 0;
+                    strokesTotal += strokes;
+                    pointsTotal += points;
+                    strokesRow.push(strokes > 0 ? strokes.toString() : '-');
+                    pointsRow.push(points >= 0 && strokes > 0 ? points.toString() : '-');
+                }
+                strokesRow.push(strokesTotal.toString());
+                pointsRow.push(pointsTotal.toString());
+                playerRows.push(strokesRow);
+                playerRows.push(pointsRow);
+            });
+
+            // Winner row for team matches
+            const winnerRow: string[] = [];
+            if (round.format === 'teams' && round.teams && round.teams.length === 2) {
+                winnerRow.push('Winner');
+                let team1Wins = 0;
+                let team2Wins = 0;
+                for (let h = startHole; h <= endHole; h++) {
+                    const result = getHoleWinner(h);
+                    if (result.winner === round.teams[0].name) {
+                        winnerRow.push(round.teams[0].name.substring(0, 8));
+                        team1Wins++;
+                    } else if (result.winner === round.teams[1].name) {
+                        winnerRow.push(round.teams[1].name.substring(0, 8));
+                        team2Wins++;
+                    } else if (result.winner === 'Halved') {
+                        winnerRow.push('Halved');
+                    } else {
+                        winnerRow.push('-');
+                    }
+                }
+                winnerRow.push(`${team1Wins}-${team2Wins}`);
+            }
+
+            const bodyRows = [parRow, siRow, ...playerRows];
+            if (winnerRow.length > 0) {
+                bodyRows.push(winnerRow);
+            }
+
+            return {headers, body: bodyRows};
+        };
+
+        // Front 9 table
+        const front9 = buildScorecardData(1, 9);
+        autoTable(doc, {
+            startY: scorecardStartY + 5,
+            head: [front9.headers],
+            body: front9.body,
+            theme: 'grid',
+            headStyles: {fillColor: [59, 130, 246], fontSize: 8, halign: 'center'},
+            bodyStyles: {fontSize: 8, halign: 'center'},
+            columnStyles: {0: {halign: 'left', fontStyle: 'bold'}},
+            margin: {left: 14, right: 14},
+            styles: {cellPadding: 2}
+        });
+
+        // Back 9 table
+        // @ts-expect-error autoTable adds lastAutoTable to doc
+        const back9StartY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Scorecard - Back 9', 14, back9StartY);
+
+        const back9 = buildScorecardData(10, 18);
+        autoTable(doc, {
+            startY: back9StartY + 5,
+            head: [back9.headers],
+            body: back9.body,
+            theme: 'grid',
+            headStyles: {fillColor: [59, 130, 246], fontSize: 8, halign: 'center'},
+            bodyStyles: {fontSize: 8, halign: 'center'},
+            columnStyles: {0: {halign: 'left', fontStyle: 'bold'}},
+            margin: {left: 14, right: 14},
+            styles: {cellPadding: 2}
+        });
+
+        // Save the PDF
+        const fileName = `${round.course.name.replace(/\s+/g, '_')}_${round.date}.pdf`;
+        doc.save(fileName);
+    }
+
+    return (
+        <>
+            <div className="rounds-container">
+                <div className="table-container">
+                    <div className="table-header">
+                        <div className="table-cell">Course</div>
+                        <div className="table-cell">Date</div>
+                        <div className="table-cell">Status</div>
+                        <div className="table-cell">Actions</div>
                     </div>
-                    <div className="action-buttons">
-                        <button className="button-primary" onClick={handleAddRoundClick}>Create round</button>
+                    {rounds.map((round, index) => (
+                        <div key={index} className="table-row">
+                            <div className="table-cell">{round.course.name}</div>
+                            <div className="table-cell m-align-right">{formatDate(round.date)}</div>
+                            <div className="table-cell">
+                                <span className={`status-badge ${round.completed ? 'completed' : 'in-progress'}`}>
+                                    {round.completed ? 'Completed' : 'In Progress'}
+                                </span>
+                            </div>
+                            <div className="table-cell actions-cell">
+                                {round.completed ? (
+                                    <>
+                                        <button className="button-icon"
+                                                onClick={() => handleViewRoundClick(round)}
+                                                title="View round">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
+                                        </button>
+                                        <button className="button-primary m-left-8"
+                                                onClick={() => handleExportRound(round)}>Export
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button className="button-icon"
+                                            onClick={() => handleEditRoundClick(round)}
+                                            title="Continue round">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                        </svg>
+                                    </button>
+                                )}
+                                <button className="button-icon button-danger m-left-8"
+                                        onClick={() => handleDeleteClick(round)}
+                                        title="Delete round">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="action-buttons">
+                    <button className="button-primary" onClick={handleAddRoundClick}>Create round</button>
+                </div>
+            </div>
+            {showRoundModal && <AddRoundModal
+                onCloseModal={handleCloseModalClick}
+                onRoundCreated={handleRoundCreated}
+            ></AddRoundModal>}
+
+            {roundToDelete && (
+                <div className="modal-overlay">
+                    <div className="modal confirm-modal">
+                        <div className="modal-header">
+                            <h2>Delete Round</h2>
+                        </div>
+                        <div className="modal-body">
+                            <p>Are you sure you want to delete this round at <strong>{roundToDelete.course.name}</strong> on <strong>{formatDate(roundToDelete.date)}</strong>?</p>
+                            <p className="warning-text">This action cannot be undone.</p>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="button-secondary" onClick={handleCancelDelete}>Cancel</button>
+                            <button className="button-danger m-left-8" onClick={handleConfirmDelete}>Delete</button>
+                        </div>
                     </div>
                 </div>
-                {showRoundModal && <AddRoundModal
-                    onCloseModal={handleCloseModalClick}
-                    onRoundCreated={handleRoundCreated}
-                ></AddRoundModal>}
-
-            </>
-        )
-    }
+            )}
+        </>
+    )
 
 }
 export default Rounds
