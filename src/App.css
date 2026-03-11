@@ -1,18 +1,263 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
 }
 
 body {
-    padding: 0;
-    margin: 0;
-    background: black;
-    display: flex;
-    justify-content: center;
+  padding: 0;
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(180deg, 
+    #0d2818 0%, 
+    #143d22 25%, 
+    #1a4d2a 50%, 
+    #143d22 75%, 
+    #0d2818 100%
+  );
+  background-attachment: fixed;
+  color: #f0f7f0;
+  display: flex;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+/* Subtle grass texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(45, 90, 39, 0.03) 2px,
+      rgba(45, 90, 39, 0.03) 4px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Golf ball dimple pattern for cards */
+.golf-pattern {
+  position: relative;
+}
+
+.golf-pattern::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(
+    circle at 20% 30%,
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 1px
+  ),
+  radial-gradient(
+    circle at 60% 70%,
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 1px
+  ),
+  radial-gradient(
+    circle at 80% 20%,
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 1px
+  );
+  background-size: 50px 50px, 70px 70px, 40px 40px;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .app {
-    width: 100%;
-    height: 100vh;
-    /*overflow-y: auto;*/
-    /*overflow-x: hidden;*/
+  width: 100%;
+  max-width: 600px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Scorecard-style number font */
+.score-font {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Golf flag icon styling */
+.flag-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.flag-icon::before {
+  content: '⛳';
+  font-size: 18px;
+}
+
+/* Tee marker colors */
+.tee-black { background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%); }
+.tee-blue { background: linear-gradient(135deg, #0066cc 0%, #004499 100%); }
+.tee-white { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); color: #333; }
+.tee-yellow { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #333; }
+.tee-red { background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%); }
+.tee-gold { background: linear-gradient(135deg, #ffd700 0%, #daa520 100%); color: #333; }
+
+/* Hole number badge */
+.hole-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #2d5a27 0%, #1e4a1e 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 18px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Par indicator */
+.par-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #d4af37;
+}
+
+/* Yardage display */
+.yardage {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: #a8c9a8;
+}
+
+.yardage::after {
+  content: ' yds';
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+/* Card styling with golf aesthetic */
+.golf-card {
+  background: linear-gradient(145deg, rgba(21, 48, 21, 0.95) 0%, rgba(13, 40, 13, 0.98) 100%);
+  border: 1px solid rgba(123, 168, 114, 0.15);
+  border-radius: 16px;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+/* Stroke index badge */
+.stroke-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(220, 53, 69, 0.2);
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  border-radius: 50%;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 13px;
+  color: #ff6b7a;
+}
+
+/* Points display */
+.points-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 36px;
+  padding: 0 12px;
+  background: linear-gradient(135deg, rgba(45, 90, 39, 0.3) 0%, rgba(30, 74, 30, 0.4) 100%);
+  border: 1px solid rgba(74, 124, 67, 0.3);
+  border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 16px;
+  color: #7dd87d;
+}
+
+/* Handicap badge */
+.handicap-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(135, 206, 235, 0.15);
+  border: 1px solid rgba(135, 206, 235, 0.25);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #87ceeb;
+}
+
+.handicap-badge::before {
+  content: 'HCP';
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(74, 124, 67, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 124, 67, 0.7);
+}
+
+/* Selection colors */
+::selection {
+  background: rgba(45, 90, 39, 0.5);
+  color: white;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid rgba(74, 124, 67, 0.8);
+  outline-offset: 2px;
+}
+
+/* Input autofill styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f0f7f0;
+  -webkit-box-shadow: 0 0 0px 1000px #1f3d1f inset;
+  transition: background-color 5000s ease-in-out 0s;
 }

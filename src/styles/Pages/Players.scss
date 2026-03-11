@@ -1,67 +1,279 @@
+// Golf-themed players page - Grid Layout
+$golf-fairway: #2d5a27;
+$golf-forest: #1a3d16;
+$golf-light-green: #4a7c43;
+$golf-pale-green: #7ba872;
+$accent-gold: #d4af37;
+$text-primary: #f0f7f0;
+$text-secondary: #a8c9a8;
+$text-muted: #6b9b6b;
+$bg-card: #153015;
+
 .players-container {
-  padding-top: 100px;
-  width: 1250px;
-  @media screen and (max-width: 1300px) {
-    width: calc(100dvw - 32px);
-  }
-  margin: auto;
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
 
-  .table-container {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 24px;
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(123, 168, 114, 0.15);
 
-    .table-header {
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: $text-primary;
+      margin: 0;
       display: flex;
-      background-color: rgba(255, 255, 255, 0.1);
-      font-weight: bold;
-      color: white;
+      align-items: center;
+      gap: 10px;
 
-      .table-cell {
-        flex: 1;
-        padding: 12px 16px;
+      &::before {
+        content: '👥';
+        font-size: 26px;
       }
     }
 
-    .table-row {
+    .player-count {
+      font-size: 14px;
+      color: $text-muted;
+      font-weight: 500;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+  }
+
+  // Empty state - glass effect
+  .empty-state-glass {
+    text-align: center;
+    padding: 60px 24px;
+    background: linear-gradient(
+      145deg,
+      rgba(21, 48, 21, 0.6) 0%,
+      rgba(13, 40, 24, 0.7) 100%
+    );
+    border: 2px dashed rgba(123, 168, 114, 0.25);
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.7;
+    }
+
+    h3 {
+      font-size: 20px;
+      color: $text-secondary;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 15px;
+      color: rgba(168, 201, 168, 0.8);
+      margin-bottom: 24px;
+    }
+  }
+
+  // Players grid - Responsive
+  .players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .player-card {
+    background: linear-gradient(
+      145deg,
+      rgba(21, 48, 21, 0.75) 0%,
+      rgba(13, 40, 24, 0.85) 100%
+    );
+    border: 1px solid rgba(123, 168, 114, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    &:hover {
+      transform: translateY(-2px);
+      border-color: rgba(123, 168, 114, 0.25);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    // Left accent bar (gold for players)
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, $accent-gold 0%, #b8960c 100%);
+    }
+
+    // Top row: Avatar and Player info
+    .card-header {
       display: flex;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      color: white;
+      align-items: center;
+      gap: 14px;
 
-      &:last-child {
-        border-bottom: none;
-      }
-
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.05);
-      }
-
-      .table-cell {
-        flex: 1;
-        padding: 12px 16px;
+      .player-avatar {
+        width: 52px;
+        height: 52px;
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%);
+        border: 1px solid rgba(212, 175, 55, 0.25);
+        border-radius: 50%;
         display: flex;
         align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        flex-shrink: 0;
+      }
+
+      .player-info {
+        flex: 1;
+        min-width: 0;
+
+        .player-name {
+          font-size: 17px;
+          font-weight: 700;
+          color: $text-primary;
+          line-height: 1.3;
+          word-wrap: break-word;
+          margin-bottom: 6px;
+        }
+
+        .player-handicap {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 12px;
+          background: rgba(135, 206, 235, 0.1);
+          border: 1px solid rgba(135, 206, 235, 0.2);
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #87ceeb;
+          font-family: 'JetBrains Mono', monospace;
+
+          &::before {
+            content: 'HCP';
+            font-size: 10px;
+            opacity: 0.7;
+          }
+        }
+      }
+    }
+
+    // Bottom row: Action buttons
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      padding-top: 12px;
+      border-top: 1px solid rgba(123, 168, 114, 0.1);
+
+      .action-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        border: none;
+        background: rgba(0, 0, 0, 0.2);
+        color: $text-secondary;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        font-size: 18px;
+
+        &:hover {
+          background: rgba(123, 168, 114, 0.2);
+          color: $text-primary;
+          transform: scale(1.05);
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+
+        &.edit:hover {
+          background: rgba(45, 90, 39, 0.3);
+          color: #7dd87d;
+        }
       }
     }
   }
 
+  // Action buttons container
   .action-buttons {
     display: flex;
     justify-content: center;
+    margin-bottom: 24px;
+
+    .button-primary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      font-size: 15px;
+    }
   }
 }
 
-.button-secondary {
-  background-color: transparent;
-  border: 1px solid #155DFC;
-  color: #155DFC;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+// Desktop adjustments
+@media screen and (min-width: 768px) {
+  .players-container {
+    padding: 28px;
 
-  &:hover {
-    background-color: rgba(21, 93, 252, 0.1);
+    .players-grid {
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .player-card {
+      padding: 24px;
+
+      .card-header {
+        .player-avatar {
+          width: 56px;
+          height: 56px;
+          font-size: 28px;
+        }
+
+        .player-info {
+          .player-name {
+            font-size: 18px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Large screens - 3 columns
+@media screen and (min-width: 1200px) {
+  .players-container {
+    .players-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 }

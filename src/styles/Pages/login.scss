@@ -1,57 +1,289 @@
+// Golf-themed login page with full-screen background
+$golf-fairway: #2d5a27;
+$golf-forest: #1a3d16;
+$golf-light-green: #4a7c43;
+$golf-pale-green: #7ba872;
+$accent-gold: #d4af37;
+$text-primary: #f0f7f0;
+$text-secondary: #a8c9a8;
+
+.login-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.login-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  // Top-to-bottom fade: light/transparent at top, dark at bottom
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.1) 0%,
+      rgba(0, 0, 0, 0.2) 30%,
+      rgba(0, 0, 0, 0.5) 60%,
+      rgba(0, 0, 0, 0.85) 100%
+    );
+  }
+}
+
 .login-container {
-  width: 400px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   flex-direction: column;
+  padding: 40px 24px 60px;
+  box-sizing: border-box;
+
+  .login-content {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
 
   .login-header {
-    font-size: 28px;
-    font-weight: bold;
-    font-family: Roboto, sans-serif;
-    color: white;
+    font-size: 42px;
+    font-weight: 800;
+    color: $text-primary;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+    text-align: center;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+
+    span {
+      color: $accent-gold;
+    }
+  }
+
+  .login-subtitle {
+    font-size: 16px;
+    color: $text-secondary;
+    margin-bottom: 40px;
+    text-align: center;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
   }
 
   .login-image {
-    margin-top: 40px;
+    margin-bottom: 32px;
     position: relative;
+    
+    // Golf ball styling
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 -4px 8px rgba(0, 0, 0, 0.1);
 
-    img {
-      height: 100px;
-      object-fit: cover;
-      width: 100px;
+    // Golf ball dimples pattern
+    &::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 30% 30%, rgba(0, 0, 0, 0.08) 2px, transparent 2px),
+        radial-gradient(circle at 70% 40%, rgba(0, 0, 0, 0.08) 2px, transparent 2px),
+        radial-gradient(circle at 50% 70%, rgba(0, 0, 0, 0.08) 2px, transparent 2px),
+        radial-gradient(circle at 25% 60%, rgba(0, 0, 0, 0.06) 2px, transparent 2px),
+        radial-gradient(circle at 75% 65%, rgba(0, 0, 0, 0.06) 2px, transparent 2px);
+      background-size: 25px 25px;
       border-radius: 50%;
-
     }
 
-    &:after {
-      border-radius: 100px;
-      left: 0;
-      top: 0;
-      transform: translate(-7.5px, -7.5px);
-      width: 110px;
-      height: 110px;
-      content: "";
+    // Flag icon inside ball
+    &::after {
+      content: '⛳';
+      font-size: 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    // Outer glow ring
+    .ball-ring {
       position: absolute;
-      border: 3px solid white;
+      top: -8px;
+      left: -8px;
+      right: -8px;
+      bottom: -8px;
+      border: 2px solid rgba(212, 175, 55, 0.4);
+      border-radius: 50%;
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+  }
+
+  @keyframes pulse-ring {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.9;
     }
   }
 
   .login-form {
-    margin-top: 16px;
+    width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    width: 100%;
+    gap: 20px;
+
+    .tagline {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.8);
+      text-align: center;
+      margin-bottom: 8px;
+      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      label {
+        font-size: 14px;
+        font-weight: 600;
+        color: $text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      input {
+        width: 100%;
+        height: 56px;
+        padding: 0 20px;
+        background: rgba(31, 61, 31, 0.6);
+        border: 1px solid rgba(123, 168, 114, 0.2);
+        border-radius: 12px;
+        color: $text-primary;
+        font-size: 16px;
+        transition: all 0.2s ease;
+
+        &::placeholder {
+          color: rgba(168, 201, 168, 0.4);
+        }
+
+        &:focus {
+          outline: none;
+          border-color: $golf-pale-green;
+          background: rgba(31, 61, 31, 0.8);
+          box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
+        }
+      }
+    }
+
+    .login-button,
+    .enter-button {
+      width: 100%;
+      height: 56px;
+      margin-top: 8px;
+      background: linear-gradient(135deg, $golf-light-green 0%, $golf-fairway 50%, $golf-forest 100%);
+      border: none;
+      border-radius: 12px;
+      color: $text-primary;
+      font-size: 17px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.4),
+        0 2px 4px rgba(45, 90, 39, 0.4);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+          0 6px 24px rgba(0, 0, 0, 0.5),
+          0 4px 8px rgba(45, 90, 39, 0.5);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
   }
 
   .no-account {
-    margin-top: 40px;
-    color: white;
+    margin-top: 32px;
+    color: $text-secondary;
+    font-size: 15px;
+    text-align: center;
 
     a {
-      color: blue;
+      color: $accent-gold;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.2s ease;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .login-footer {
+    margin-top: auto;
+    padding-top: 40px;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(168, 201, 168, 0.5);
+    
+    .golf-quote {
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-height: 700px) {
+  .login-container {
+    justify-content: center;
+    padding: 24px;
+    
+    .login-header {
+      font-size: 36px;
+    }
+    
+    .login-image {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 24px;
+      
+      &::after {
+        font-size: 32px;
+      }
     }
   }
 }

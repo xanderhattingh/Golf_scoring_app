@@ -1,62 +1,113 @@
-// Mobile-optimized button styles
-$accent-blue: #3b82f6;
-$accent-green: #10b981;
-$text-primary: #f8fafc;
+// Golf-themed button styles
 
+$golf-fairway: #2d5a27;
+$golf-forest: #1a3d16;
+$golf-light-green: #4a7c43;
+$golf-pale-green: #7ba872;
+$accent-gold: #d4af37;
+$text-primary: #f0f7f0;
+
+// Primary Golf Button (Fairway Green)
 .button-primary {
-  &.m-left-8 {
-    margin-left: 8px;
-  }
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 52px;
-  padding: 14px 24px;
+  padding: 14px 28px;
   color: $text-primary;
-  background: linear-gradient(135deg, $accent-blue 0%, #2563eb 100%);
-  border-radius: 12px;
+  background: linear-gradient(135deg, $golf-light-green 0%, $golf-fairway 50%, $golf-forest 100%);
   border: none;
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 2px 8px rgba($accent-blue, 0.25);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(45, 90, 39, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+
+  // Sheen effect
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+    transition: left 0.5s ease;
+  }
+
+  &:hover::before {
+    left: 100%;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 6px 20px rgba(0, 0, 0, 0.4),
+      0 4px 8px rgba(45, 90, 39, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    filter: grayscale(0.5);
+  }
 
   &.min-100 {
     min-width: 100px;
   }
 
-  &:active:not(:disabled) {
-    transform: scale(0.98);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    box-shadow: none;
+  &.m-left-8 {
+    margin-left: 8px;
   }
 }
 
+// Secondary Button (Subtle)
 .button-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 52px;
-  padding: 14px 24px;
+  padding: 14px 28px;
   color: $text-primary;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(123, 168, 114, 0.1);
+  border: 1px solid rgba(123, 168, 114, 0.25);
   border-radius: 12px;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 
+  &:hover:not(:disabled) {
+    background: rgba(123, 168, 114, 0.2);
+    border-color: rgba(123, 168, 114, 0.4);
+    transform: translateY(-1px);
+  }
+
   &:active:not(:disabled) {
-    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(0);
+    background: rgba(123, 168, 114, 0.15);
   }
 
   &:disabled {
@@ -65,34 +116,104 @@ $text-primary: #f8fafc;
   }
 }
 
+// Success Button (Gold - for championships/important actions)
 .button-success {
-  @extend .button-primary;
-  background: linear-gradient(135deg, $accent-green 0%, #059669 100%);
-  box-shadow: 0 2px 8px rgba($accent-green, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 14px 28px;
+  color: #1a3d16;
+  background: linear-gradient(135deg, #f4d03f 0%, $accent-gold 50%, #b8960c 100%);
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 
+    0 4px 12px rgba(212, 175, 55, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 6px 20px rgba(212, 175, 55, 0.5),
+      0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
+// Danger/Delete Button (Red flag style)
+.button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 14px 28px;
+  color: $text-primary;
+  background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 
+    0 4px 12px rgba(220, 53, 69, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 6px 20px rgba(220, 53, 69, 0.4),
+      0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Icon Button (Circular)
 .button-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   color: $text-primary;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
+  background: rgba(123, 168, 114, 0.15);
+  border: 1px solid rgba(123, 168, 114, 0.25);
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 
-  &.m-left-8 {
-    margin-left: 8px;
+  &:hover:not(:disabled) {
+    background: rgba(123, 168, 114, 0.25);
+    border-color: rgba(123, 168, 114, 0.4);
+    transform: scale(1.05);
   }
 
   &:active:not(:disabled) {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.15);
   }
 
   &:disabled {
@@ -102,44 +223,164 @@ $text-primary: #f8fafc;
 
   svg {
     flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+
+  &.m-left-8 {
+    margin-left: 8px;
+  }
+
+  // Variants
+  &.danger {
+    background: rgba(220, 53, 69, 0.15);
+    border-color: rgba(220, 53, 69, 0.25);
+    color: #ff6b7a;
+
+    &:hover:not(:disabled) {
+      background: rgba(220, 53, 69, 0.3);
+      border-color: rgba(220, 53, 69, 0.4);
+      color: #ff8585;
+    }
+  }
+
+  &.gold {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: rgba(212, 175, 55, 0.25);
+    color: #d4af37;
+
+    &:hover:not(:disabled) {
+      background: rgba(212, 175, 55, 0.25);
+      border-color: rgba(212, 175, 55, 0.4);
+      color: #f4d03f;
+    }
+  }
+
+  // Spacing modifier
+  &.m-left-8 {
+    margin-left: 8px;
   }
 }
 
-.button-danger {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
+// Tee Button Group (for selecting tees)
+.tee-button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 
-  &:active:not(:disabled) {
-    background: rgba(239, 68, 68, 0.25);
+  .tee-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 36px;
+    padding: 0 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 18px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &.tee-black {
+      background: #2c2c2c;
+      color: white;
+      border-color: #444;
+    }
+
+    &.tee-blue {
+      background: #0066cc;
+      color: white;
+      border-color: #0088ff;
+    }
+
+    &.tee-white {
+      background: #f8f9fa;
+      color: #333;
+      border-color: #ddd;
+    }
+
+    &.tee-yellow {
+      background: #ffc107;
+      color: #333;
+      border-color: #ffdb4d;
+    }
+
+    &.tee-red {
+      background: #dc3545;
+      color: white;
+      border-color: #ff6b7a;
+    }
+
+    &.tee-gold {
+      background: linear-gradient(135deg, #ffd700 0%, #daa520 100%);
+      color: #333;
+      border-color: #ffec8b;
+    }
+
+    &.selected {
+      box-shadow: 0 0 0 3px rgba(123, 168, 114, 0.5);
+      transform: scale(1.05);
+    }
+
+    &:hover:not(.selected) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
   }
 }
 
-// Standalone danger button (non-icon)
-button.button-danger:not(.button-icon) {
-  display: inline-flex;
+// Floating Action Button (like a golf ball)
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+  border: none;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 52px;
-  padding: 14px 24px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  color: $text-primary;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+  transition: all 0.2s ease;
+  z-index: 100;
 
-  &:active:not(:disabled) {
-    transform: scale(0.98);
+  // Golf ball dimples
+  &::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    top: 15px;
+    left: 20px;
+    box-shadow: 
+      15px 5px 0 rgba(0, 0, 0, 0.1),
+      -5px 15px 0 rgba(0, 0, 0, 0.1),
+      20px 20px 0 rgba(0, 0, 0, 0.08);
   }
 
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    box-shadow: none;
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 
+      0 6px 20px rgba(0, 0, 0, 0.4),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  svg {
+    color: #2d5a27;
+    width: 24px;
+    height: 24px;
   }
 }

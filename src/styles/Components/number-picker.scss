@@ -1,19 +1,40 @@
+// Golf-themed Number Picker
+$golf-fairway: #2d5a27;
+$golf-forest: #1a3d16;
+$golf-light-green: #4a7c43;
+$golf-pale-green: #7ba872;
+$accent-gold: #d4af37;
+$text-primary: #f0f7f0;
+$text-secondary: #a8c9a8;
+$text-muted: #6b9b6b;
+
 .number-picker-trigger {
   height: 100%;
   width: 60px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  background: #232f3e;
-  color: #f8fafc;
+  border: 1px solid rgba(123, 168, 114, 0.3);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(21, 48, 21, 0.8) 0%, rgba(13, 40, 24, 0.9) 100%);
+  color: $text-primary;
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  grid-row: 1/span 2;
+  grid-column: 2/span 1;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  &:hover {
+    border-color: rgba(123, 168, 114, 0.5);
+    background: linear-gradient(145deg, rgba(21, 48, 21, 0.9) 0%, rgba(13, 40, 24, 1) 100%);
+  }
 
   &:active {
-    background: #2d3b4f;
+    background: rgba(45, 90, 39, 0.6);
+    transform: scale(0.98);
   }
 }
 
@@ -24,6 +45,8 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,19 +54,26 @@
 }
 
 .number-picker-modal {
-  background: #1a2332;
-  border-radius: 16px;
+  background: linear-gradient(
+                  145deg,
+                  rgba(21, 48, 21, 0.95) 0%,
+                  rgba(13, 40, 24, 0.98) 100%
+  );
+  border: 1px solid rgba(123, 168, 114, 0.2);
+  border-radius: 20px;
   width: 280px;
   max-height: 70vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+  0 0 0 1px rgba(123, 168, 114, 0.1);
 }
 
 .picker-label {
   padding: 16px 16px 0;
   font-size: 14px;
-  color: #94a3b8;
+  color: $text-muted;
   text-align: center;
 }
 
@@ -51,9 +81,9 @@
   padding: 16px;
   font-size: 18px;
   font-weight: 600;
-  color: #f8fafc;
+  color: $text-primary;
   text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(123, 168, 114, 0.15);
 }
 
 .number-list {
@@ -61,28 +91,50 @@
   overflow-y: auto;
   padding: 8px 0;
   max-height: 300px;
+
+  // Custom scrollbar
+  scrollbar-width: thin;
+  scrollbar-color: rgba(123, 168, 114, 0.3) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(123, 168, 114, 0.3);
+    border-radius: 2px;
+  }
 }
 
 .number-item {
   padding: 16px 24px;
   font-size: 20px;
-  color: #94a3b8;
+  color: $text-secondary;
   text-align: center;
   cursor: pointer;
   transition: all 0.15s ease;
 
+  &:hover {
+    background: rgba(123, 168, 114, 0.1);
+  }
+
   &:active {
-    background: rgba(59, 130, 246, 0.2);
+    background: rgba(123, 168, 114, 0.2);
   }
 
   &.selected {
-    background: rgba(59, 130, 246, 0.3);
-    color: #3b82f6;
+    background: linear-gradient(90deg, rgba(45, 90, 39, 0.4) 0%, rgba(45, 90, 39, 0.2) 100%);
+    color: $accent-gold;
     font-weight: 700;
+    border-left: 3px solid $accent-gold;
   }
 
   &.placeholder {
-    color: #64748b;
+    color: $text-muted;
     font-style: italic;
   }
 }
@@ -91,13 +143,19 @@
   padding: 16px;
   font-size: 16px;
   font-weight: 600;
-  color: #94a3b8;
+  color: $text-secondary;
   background: transparent;
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(123, 168, 114, 0.15);
   cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: $text-primary;
+    background: rgba(123, 168, 114, 0.1);
+  }
 
   &:active {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(123, 168, 114, 0.2);
   }
 }

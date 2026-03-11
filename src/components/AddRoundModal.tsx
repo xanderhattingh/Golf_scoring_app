@@ -420,7 +420,7 @@ const AddRoundModal = (props) => {
                                     >
                                         <span className="format-name">Teams</span>
                                         <span className="format-description">
-                                            {selectedPlayers.length === 2 ? 'Both players on one team' : 'Two teams of 2'}
+                                            {selectedPlayers.length === 2 ? 'Both players on one team' : 'Two teams'}
                                         </span>
                                     </div>
                                 )}
@@ -451,15 +451,22 @@ const AddRoundModal = (props) => {
                                             {selectedPlayers.map(player => (
                                                 <div key={player.id} className="player-assignment">
                                                     <input
+                                                        id={`player-${player.id}`}
                                                         type="radio"
                                                         name={`player-${player.id}`}
                                                         checked={playerAssignments[player.id] === 0}
-                                                        onChange={() => setPlayerAssignments({
-                                                            ...playerAssignments,
-                                                            [player.id]: 0
-                                                        })}
+                                                        onChange={() => {
+                                                            setPlayerAssignments({
+                                                                ...playerAssignments,
+                                                                [player.id]: 0
+                                                            });
+                                                            if (teamNames[0].length == 0) {
+                                                                setTeamNames([player.name + "'s team", teamNames[1]])
+                                                            }
+
+                                                        }}
                                                     />
-                                                    <span>{player.name}</span>
+                                                    <label htmlFor={`player-${player.id}`}>{player.name}</label>
                                                 </div>
                                             ))}
                                         </div>
@@ -473,15 +480,21 @@ const AddRoundModal = (props) => {
                                             {selectedPlayers.map(player => (
                                                 <div key={player.id} className="player-assignment">
                                                     <input
+                                                        id={`player-2-${player.id}`}
                                                         type="radio"
                                                         name={`player-${player.id}`}
                                                         checked={playerAssignments[player.id] === 1}
-                                                        onChange={() => setPlayerAssignments({
-                                                            ...playerAssignments,
-                                                            [player.id]: 1
-                                                        })}
+                                                        onChange={() => {
+                                                            setPlayerAssignments({
+                                                                ...playerAssignments,
+                                                                [player.id]: 1
+                                                            });
+                                                            if (teamNames[1].length == 0) {
+                                                                setTeamNames([teamNames[0], player.name + "'s team"])
+                                                            }
+                                                        }}
                                                     />
-                                                    <span>{player.name}</span>
+                                                    <label htmlFor={`player-2-${player.id}`}>{player.name}</label>
                                                 </div>
                                             ))}
                                         </div>

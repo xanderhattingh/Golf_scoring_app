@@ -1,4 +1,5 @@
 import {useState, useRef, useEffect} from 'react';
+import {createPortal} from 'react-dom';
 import '../styles/Components/number-picker.scss';
 
 interface NumberPickerProps {
@@ -8,9 +9,10 @@ interface NumberPickerProps {
     max?: number;
     onChange: (value: number) => void;
     label?: string;
+    title?: string;
 }
 
-const NumberPicker = ({value, placeholder, min = 1, max = 15, onChange, label}: NumberPickerProps) => {
+const NumberPicker = ({value, placeholder, min = 1, max = 18, onChange, label, title = 'Select Strokes'}: NumberPickerProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const selectedRef = useRef<HTMLDivElement>(null);
 
@@ -39,11 +41,11 @@ const NumberPicker = ({value, placeholder, min = 1, max = 15, onChange, label}: 
                 {displayValue ?? '-'}
             </button>
 
-            {isOpen && (
+            {isOpen && createPortal(
                 <div className="number-picker-overlay" onClick={() => setIsOpen(false)}>
                     <div className="number-picker-modal" onClick={(e) => e.stopPropagation()}>
                         {label && <div className="picker-label">{label}</div>}
-                        <div className="picker-title">Select Strokes</div>
+                        <div className="picker-title">{title}</div>
                         <div className="number-list">
                             {numbers.map(num => (
                                 <div
@@ -64,7 +66,8 @@ const NumberPicker = ({value, placeholder, min = 1, max = 15, onChange, label}: 
                             Cancel
                         </button>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );

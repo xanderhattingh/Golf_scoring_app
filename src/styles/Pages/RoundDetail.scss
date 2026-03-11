@@ -1,141 +1,175 @@
-// Mobile-first golf scoring interface
-// Designed for outdoor use on the course
+// ============================================================================
+// ROUND DETAIL - Golf Scorecard Aesthetic
+// ============================================================================
 
-$bg-dark: #0f1419;
-$bg-card: #1a2332;
-$bg-input: #232f3e;
-$accent-green: #10b981;
-$accent-blue: #3b82f6;
-$accent-yellow: #f59e0b;
-$accent-red: #ef4444;
-$text-primary: #f8fafc;
-$text-secondary: #94a3b8;
-$text-muted: #64748b;
+$golf-fairway: #2d5a27;
+$golf-forest: #1a3d16;
+$golf-light-green: #4a7c43;
+$golf-pale-green: #7ba872;
+$golf-sand: #d4c5a9;
+$accent-gold: #d4af37;
+$flag-red: #dc3545;
+
+$bg-dark: #0d2818;
+$bg-card: #153015;
+$bg-input: #1f3d1f;
+$bg-elevated: #264026;
+
+$text-primary: #f0f7f0;
+$text-secondary: #a8c9a8;
+$text-muted: #6b9b6b;
 
 .round-detail-container {
   min-height: 100dvh;
-  background: $bg-dark;
-  padding: 0;
-  padding-bottom: 100px; // Space for fixed button
+  padding: 0 12px 120px;
+  position: relative;
 
+  // Loading state
   .loading {
     color: $text-primary;
     text-align: center;
     padding: 100px 20px;
     font-size: 18px;
+    font-family: 'JetBrains Mono', monospace;
   }
 
-  // Compact header
+  // Header with course info
   .round-header {
-    background: $bg-card;
-    padding: 16px 20px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 16px 0;
+    margin-bottom: 12px;
 
     .back-button {
-      background: none;
-      border: none;
-      color: $accent-blue;
+      background: rgba(123, 168, 114, 0.15);
+      border: 1px solid rgba(123, 168, 114, 0.25);
+      border-radius: 10px;
+      color: $text-secondary;
       cursor: pointer;
-      font-size: 16px;
-      padding: 8px 0;
-      display: flex;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 16px;
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      transition: all 0.2s ease;
       -webkit-tap-highlight-color: transparent;
+
+      &:hover {
+        background: rgba(123, 168, 114, 0.25);
+        color: $text-primary;
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
     }
 
     .round-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 8px;
+      margin-top: 16px;
+      text-align: center;
 
       h2 {
         color: $text-primary;
-        margin: 0;
-        font-size: 20px;
-        font-weight: 600;
+        margin: 0 0 12px 0;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
       }
 
-      .scoring-method,
-      .format-badge {
-        font-size: 12px;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-weight: 500;
+      .meta-badges {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
       }
 
       .scoring-method {
-        color: $text-secondary;
-        background: rgba(255, 255, 255, 0.1);
+        font-size: 12px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        color: $accent-gold;
       }
 
       .format-badge {
-        color: $accent-blue;
-        background: rgba($accent-blue, 0.15);
+        font-size: 12px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: rgba(123, 168, 114, 0.15);
+        border: 1px solid rgba(123, 168, 114, 0.25);
+        color: $text-secondary;
       }
     }
   }
 
-  // Match status - collapsible summary at top
+  // Scorecard-style status section
   .status-section {
-    background: $bg-card;
-    margin: 12px;
-    border-radius: 16px;
+    background: linear-gradient(
+                    145deg,
+                    rgba(21, 48, 21, 0.75) 0%,
+                    rgba(13, 40, 24, 0.85) 100%
+    );
+    border: 1px solid rgba(123, 168, 114, 0.2);
+    border-radius: 20px;
     padding: 20px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
-    .status-title {
-      font-size: 11px;
-      color: $text-muted;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-      font-weight: 600;
-
-      &.margin-t-20 {
-        margin-top: 20px;
-      }
-    }
-
-    .status-value {
-      font-size: 32px;
-      font-weight: 700;
-      color: $text-primary;
-      line-height: 1.2;
-
-      &.leading {
-        color: $accent-green;
-      }
-
-      &.trailing {
-        color: $accent-red;
-      }
-    }
-
+    // Match status header
     .match-status {
       text-align: center;
       padding-bottom: 16px;
       margin-bottom: 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(123, 168, 114, 0.15);
+
+      .status-title {
+        font-size: 11px;
+        color: $text-muted;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      .status-value {
+        font-size: 32px;
+        font-weight: 800;
+        color: $text-primary;
+        line-height: 1.2;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: -0.02em;
+
+        &.leading {
+          color: #7dd87d;
+          text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        }
+      }
     }
 
+    // Previous hole result
     .previous-hole-result {
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 12px;
-      padding: 14px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 14px;
+      padding: 16px;
       margin-bottom: 16px;
       text-align: center;
+      border: 1px solid rgba(123, 168, 114, 0.1);
 
       .result-title {
         font-size: 11px;
         color: $text-muted;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
         font-weight: 600;
       }
 
@@ -144,22 +178,23 @@ $text-muted: #64748b;
         font-weight: 600;
 
         &.won {
-          color: $accent-green;
+          color: #7dd87d;
         }
 
         &.halved {
-          color: $accent-yellow;
+          color: $accent-gold;
         }
       }
     }
 
+    // Holes summary (for team play)
     .holes-summary {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 12px 0;
       margin-bottom: 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(123, 168, 114, 0.15);
 
       .team-holes {
         text-align: center;
@@ -169,14 +204,16 @@ $text-muted: #64748b;
           display: block;
           font-size: 13px;
           color: $text-secondary;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
+          font-weight: 500;
         }
 
         .holes-won {
           display: block;
-          font-size: 22px;
-          font-weight: 700;
-          color: $accent-green;
+          font-size: 28px;
+          font-weight: 800;
+          color: #7dd87d;
+          font-family: 'JetBrains Mono', monospace;
         }
       }
 
@@ -185,117 +222,329 @@ $text-muted: #64748b;
         padding: 0 12px;
 
         span {
-          font-size: 13px;
-          color: $accent-yellow;
-          background: rgba($accent-yellow, 0.15);
-          padding: 6px 12px;
+          font-size: 12px;
+          color: $accent-gold;
+          background: rgba(212, 175, 55, 0.15);
+          padding: 8px 16px;
           border-radius: 20px;
-          font-weight: 500;
+          font-weight: 600;
         }
       }
     }
 
-    .team-points-totals {
+    // Points totals
+    .team-points-totals,
+    .player-points-totals {
       text-align: center;
+
+      .status-title {
+        font-size: 11px;
+        color: $text-muted;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 12px;
+        font-weight: 600;
+      }
     }
 
-    .team-scores,
-    .player-scores {
-      &.margin-t-20 {
-        margin-top: 20px;
-      }
-
-      display: flex;
-      justify-content: space-around;
-      gap: 16px;
+    .team-scores {
+      margin-bottom: 24px;
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(80px, 1fr));
+      gap: 12px;
 
       .score-item {
         text-align: center;
-        flex: 1;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 12px 8px;
+        border: 1px solid rgba(123, 168, 114, 0.1);
 
         .name {
           display: block;
-          font-size: 13px;
+          font-size: 12px;
           color: $text-secondary;
-          margin-bottom: 6px;
+          margin-bottom: 8px;
+          font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .value {
           display: block;
-          font-size: 28px;
-          font-weight: 700;
+          font-size: 24px;
+          font-weight: 800;
           color: $text-primary;
+          font-family: 'JetBrains Mono', monospace;
+        }
+      }
+    }
+
+    // Player scores grid
+    .player-scores {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(80px, 1fr));
+      gap: 12px;
+
+      .score-item {
+        text-align: center;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 12px 8px;
+        border: 1px solid rgba(123, 168, 114, 0.1);
+
+        .name {
+          display: block;
+          font-size: 12px;
+          color: $text-secondary;
+          margin-bottom: 8px;
+          font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .value {
+          display: block;
+          font-size: 24px;
+          font-weight: 800;
+          color: $text-primary;
+          font-family: 'JetBrains Mono', monospace;
         }
       }
     }
   }
 
-  // Current hole - main scoring area
+  // Current hole scoring section
   .current-hole-section {
-    background: $bg-card;
-    margin: 12px;
-    border-radius: 16px;
-    padding: 20px;
+    background: linear-gradient(
+                    145deg,
+                    rgba(21, 48, 21, 0.75) 0%,
+                    rgba(13, 40, 24, 0.85) 100%
+    );
+    border: 1px solid rgba(123, 168, 114, 0.2);
+    border-radius: 24px;
+    padding: 24px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
-    // Large hole selector for easy navigation
+    // Large hole selector
     .hole-selector {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 20px;
-      margin-bottom: 20px;
+      gap: 24px;
+      margin-bottom: 24px;
 
       button {
-        width: 56px;
-        height: 56px;
+        width: 52px;
+        height: 52px;
         border-radius: 50%;
-        background: $bg-input;
-        border: 2px solid rgba(255, 255, 255, 0.15);
+        background: linear-gradient(145deg, $bg-input 0%, #183618 100%);
+        border: 2px solid rgba(123, 168, 114, 0.2);
         color: $text-primary;
         cursor: pointer;
-        font-size: 24px;
+        font-size: 20px;
         font-weight: bold;
-        transition: all 0.15s ease;
+        transition: all 0.2s ease;
         -webkit-tap-highlight-color: transparent;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 
         &:active:not(:disabled) {
           transform: scale(0.95);
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.05);
         }
 
         &:disabled {
-          opacity: 0.25;
+          opacity: 0.3;
           cursor: not-allowed;
         }
       }
 
       span {
-        font-size: 36px;
-        font-weight: 700;
+        font-size: 42px;
+        font-weight: 800;
         color: $text-primary;
-        min-width: 140px;
+        min-width: 160px;
         text-align: center;
+        font-family: 'JetBrains Mono', monospace;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
     }
 
-    // Par and stroke index badges
+    // Hole info badges
     .hole-info {
       display: flex;
       justify-content: center;
-      gap: 12px;
-      margin-bottom: 24px;
+      gap: 16px;
+      margin-bottom: 28px;
 
-      span {
-        font-size: 15px;
-        font-weight: 600;
-        color: $text-primary;
-        background: $bg-input;
-        padding: 10px 20px;
-        border-radius: 12px;
+      .info-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 20px;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 14px;
+        border: 1px solid rgba(123, 168, 114, 0.1);
+        min-width: 80px;
+
+        .label {
+          font-size: 11px;
+          color: $text-muted;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          font-weight: 600;
+        }
+
+        .value {
+          font-size: 20px;
+          font-weight: 700;
+          color: $text-primary;
+          font-family: 'JetBrains Mono', monospace;
+        }
+
+        &.par {
+          .value {
+            color: $accent-gold;
+          }
+        }
+
+        &.stroke-index {
+          .value {
+            color: #ff6b7a;
+          }
+        }
+
+        // Editable inputs with NumberPicker
+        &.editable {
+          padding: 10px 16px;
+          border: 1px solid rgba(123, 168, 114, 0.2);
+          transition: all 0.2s ease;
+
+          &:focus-within {
+            border-color: $golf-pale-green;
+            background: rgba(45, 90, 39, 0.2);
+            box-shadow: 0 0 0 3px rgba(123, 168, 114, 0.1);
+          }
+
+          .number-picker-trigger {
+            width: 50px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            font-size: 22px;
+            font-weight: 700;
+            color: $text-primary;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.05);
+            }
+          }
+
+          &.par .number-picker-trigger {
+            color: $accent-gold;
+          }
+
+          &.stroke-index .number-picker-trigger {
+            color: #ff6b7a;
+          }
+        }
       }
     }
 
-    // Score input area - optimized for touch
+    // Pink ball section
+    .pink-ball-section {
+      background: linear-gradient(
+                      135deg,
+                      rgba(236, 72, 153, 0.2) 0%,
+                      rgba(236, 72, 153, 0.1) 100%
+      );
+      border: 2px solid rgba(236, 72, 153, 0.3);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+
+      .pink-ball-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #ec4899;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        &::before {
+          content: '🎀';
+          font-size: 16px;
+        }
+      }
+
+      .pink-ball-players {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        max-width: 280px;
+        margin: 0 auto;
+
+        .pink-ball-btn {
+          background: rgba(0, 0, 0, 0.2);
+          border: 2px solid rgba(236, 72, 153, 0.2);
+          border-radius: 24px;
+          padding: 10px 16px;
+          color: $text-secondary;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          -webkit-tap-highlight-color: transparent;
+          text-align: center;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+
+          &:active {
+            transform: scale(0.98);
+          }
+
+          &.selected {
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            border-color: #ec4899;
+            color: white;
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
+            font-weight: 600;
+          }
+        }
+
+        // For odd number of players, center the last item
+        &:has(.pink-ball-btn:nth-child(odd):last-child) {
+          .pink-ball-btn:last-child {
+            grid-column: 1 / -1;
+            justify-self: center;
+            max-width: 50%;
+          }
+        }
+      }
+    }
+
+    // Score inputs
     .score-inputs {
       margin-bottom: 20px;
 
@@ -306,13 +555,31 @@ $text-muted: #64748b;
           margin-bottom: 0;
         }
 
-        h4 {
-          color: $accent-blue;
-          margin: 0 0 12px 0;
-          font-size: 14px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+        .team-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid rgba(123, 168, 114, 0.1);
+
+          .team-flag {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+          }
+
+          h4 {
+            color: $text-secondary;
+            margin: 0;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
         }
       }
 
@@ -322,54 +589,61 @@ $text-muted: #64748b;
         grid-template-rows: auto auto;
         gap: 8px 12px;
         padding: 16px;
-        background: $bg-input;
-        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(123, 168, 114, 0.15);
+        border-radius: 16px;
         margin-bottom: 10px;
         align-items: center;
-
-        .number-picker-trigger {
-          grid-row: 1/span 2;
-        }
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
 
         &:last-child {
           margin-bottom: 0;
         }
 
-        .player-name {
-          color: $text-primary;
-          font-size: 17px;
-          font-weight: 600;
+        .player-info {
           grid-column: 1;
-          grid-row: 1;
-        }
+          grid-row: 1 / 3;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
 
-        .player-handicap {
-          font-size: 12px;
-          color: $text-muted;
-          grid-column: 1;
-          grid-row: 2;
+          .player-name {
+            color: $text-primary;
+            font-size: 17px;
+            font-weight: 600;
+          }
+
+          .player-handicap {
+            font-size: 12px;
+            color: $text-muted;
+            font-family: 'JetBrains Mono', monospace;
+          }
         }
 
         input {
           grid-column: 2;
           grid-row: 1 / 3;
           width: 72px;
-          height: 60px;
+          height: 56px;
           padding: 0;
-          border: 2px solid rgba(255, 255, 255, 0.15);
-          border-radius: 12px;
-          background: $bg-dark;
+          border: 2px solid rgba(123, 168, 114, 0.2);
+          border-radius: 14px;
+          background: rgba(0, 0, 0, 0.3);
           color: $text-primary;
           font-size: 28px;
           font-weight: 700;
           text-align: center;
+          font-family: 'JetBrains Mono', monospace;
           -webkit-appearance: none;
           -moz-appearance: textfield;
+          transition: all 0.2s ease;
 
           &:focus {
             outline: none;
-            border-color: $accent-blue;
-            background: rgba($accent-blue, 0.1);
+            border-color: $golf-pale-green;
+            background: rgba(45, 90, 39, 0.2);
+            box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
           }
 
           &::-webkit-inner-spin-button,
@@ -382,108 +656,112 @@ $text-muted: #64748b;
         .points-display {
           grid-column: 3;
           grid-row: 1 / 3;
-          min-width: 56px;
-          height: 60px;
+          min-width: 64px;
+          height: 56px;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
-          background: rgba($accent-green, 0.15);
-          border-radius: 12px;
-          color: $accent-green;
+          background: linear-gradient(135deg, rgba(45, 90, 39, 0.3) 0%, rgba(30, 74, 30, 0.4) 100%);
+          border: 1px solid rgba(74, 124, 67, 0.3);
+          border-radius: 14px;
+          color: #7dd87d;
           font-weight: 700;
-          font-size: 18px;
+          font-size: 16px;
+          font-family: 'JetBrains Mono', monospace;
+
+          // Default points (calculated from par when no score entered)
+          .points-default {
+            color: rgba(125, 216, 125, 0.6);
+            font-style: italic;
+          }
+
+          .points-multiplier {
+            font-size: 10px;
+            opacity: 0.8;
+            font-weight: 500;
+          }
         }
       }
     }
-
-    .submit-hole {
-      display: none; // Hidden - using fixed button instead
-    }
   }
 
-  // Fixed bottom action button
+  // Fixed bottom action bar
   .fixed-action-bar {
     position: fixed;
     bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 16px 20px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    background: linear-gradient(to top, $bg-dark 80%, transparent);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 600px;
+    padding: 16px 20px 24px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, rgba(13, 40, 24, 0.98) 60%, transparent);
     z-index: 100;
-  }
 
-  .button-primary {
-    width: 100%;
-    background: linear-gradient(135deg, $accent-blue 0%, #2563eb 100%);
-    color: white;
-    border: none;
-    padding: 18px 24px;
-    border-radius: 14px;
-    font-size: 18px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    -webkit-tap-highlight-color: transparent;
-    box-shadow: 0 4px 12px rgba($accent-blue, 0.3);
-
-    &:active:not(:disabled) {
-      transform: scale(0.98);
+    .button-primary,
+    .button-secondary {
+      width: 100%;
+      min-height: 52px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
     }
 
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-  }
+    .finish-button {
+      background: linear-gradient(135deg, #d4af37 0%, #b8960c 100%);
+      color: #1a3d16;
+      box-shadow: 0 4px 16px rgba(212, 175, 55, 0.4);
 
-  .finish-button {
-    width: 100%;
-    background: linear-gradient(135deg, $accent-green 0%, #059669 100%) !important;
-    box-shadow: 0 4px 12px rgba($accent-green, 0.3) !important;
+      &:hover:not(:disabled) {
+        box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+      }
+    }
   }
 }
 
-// Tablet and desktop adjustments
+// ============================================================================
+// Tablet and Desktop
+// ============================================================================
+
 @media screen and (min-width: 768px) {
   .round-detail-container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding-top: 20px;
+    padding: 20px 24px 120px;
 
     .round-header {
-      border-radius: 16px;
-      margin: 12px;
-      position: relative;
+      padding: 20px 0;
+
+      .round-info h2 {
+        font-size: 28px;
+      }
     }
 
     .current-hole-section {
+      padding: 28px;
+
+      .hole-selector span {
+        font-size: 48px;
+      }
+
       .score-inputs {
         .player-score-input {
           grid-template-columns: 1fr auto auto auto;
           grid-template-rows: 1fr;
+          padding: 20px;
 
-          .player-name {
+          .player-info {
             grid-row: 1;
-          }
-
-
-          .player-handicap {
-            grid-column: 2;
-            grid-row: 1;
-            background: rgba(255, 255, 255, 0.08);
-            padding: 8px 12px;
-            border-radius: 8px;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            padding-right: 20px;
           }
 
           input {
-            grid-column: 3;
             grid-row: 1;
           }
 
           .points-display {
-            grid-column: 4;
             grid-row: 1;
           }
         }

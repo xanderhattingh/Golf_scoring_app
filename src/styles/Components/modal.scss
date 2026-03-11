@@ -1,8 +1,14 @@
-// Mobile-optimized modal styles
-$bg-dark: #0f1419;
-$bg-card: #1a2332;
-$text-primary: #f8fafc;
-$text-secondary: #94a3b8;
+// Golf-themed modal styles
+$golf-fairway: #2d5a27;
+$golf-forest: #1a3d16;
+$golf-light-green: #4a7c43;
+$golf-pale-green: #7ba872;
+$accent-gold: #d4af37;
+$text-primary: #f0f7f0;
+$text-secondary: #a8c9a8;
+$text-muted: #6b9b6b;
+$bg-card: #153015;
+$bg-input: #1f3d1f;
 
 .modal-container {
   position: fixed;
@@ -10,7 +16,8 @@ $text-secondary: #94a3b8;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,17 +30,26 @@ $text-secondary: #94a3b8;
     overflow-y: auto;
     width: 100%;
     max-width: 500px;
-    padding: 24px;
-    background: $bg-card;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    padding: 28px;
+    background: linear-gradient(
+      145deg,
+      rgba(21, 48, 21, 0.9) 0%,
+      rgba(13, 40, 24, 0.95) 100%
+    );
+    border: 1px solid rgba(123, 168, 114, 0.2);
+    border-radius: 24px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(123, 168, 114, 0.1);
 
     // Smooth scrolling with momentum
     -webkit-overflow-scrolling: touch;
 
     // Hide scrollbar but keep functionality
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: rgba(123, 168, 114, 0.3) transparent;
 
     &::-webkit-scrollbar {
       width: 6px;
@@ -44,7 +60,7 @@ $text-secondary: #94a3b8;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(123, 168, 114, 0.3);
       border-radius: 3px;
     }
 
@@ -58,7 +74,8 @@ $text-secondary: #94a3b8;
         margin: 0;
         color: $text-primary;
         font-size: 22px;
-        font-weight: 600;
+        font-weight: 700;
+        letter-spacing: -0.02em;
       }
 
       .close-button {
@@ -67,16 +84,23 @@ $text-secondary: #94a3b8;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(255, 255, 255, 0.1);
-        border: none;
-        border-radius: 50%;
-        color: $text-primary;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(123, 168, 114, 0.15);
+        border-radius: 12px;
+        color: $text-secondary;
         font-size: 24px;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(220, 53, 69, 0.15);
+          border-color: rgba(220, 53, 69, 0.25);
+          color: #ff6b7a;
+        }
 
         &:active {
-          background: rgba(255, 255, 255, 0.15);
+          transform: scale(0.95);
         }
       }
     }
@@ -94,9 +118,9 @@ $text-secondary: #94a3b8;
     .modal-content {
       max-height: 95dvh;
       max-width: 100%;
-      border-radius: 24px 24px 0 0;
-      padding: 12px;
-      padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      border-radius: 28px 28px 0 0;
+      padding: 16px;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom) + 85px);
 
       // Drag handle indicator
       &::before {
@@ -104,9 +128,9 @@ $text-secondary: #94a3b8;
         display: block;
         width: 40px;
         height: 4px;
-        background: rgba(255, 255, 255, 0.3);
+        background: rgba(123, 168, 114, 0.3);
         border-radius: 2px;
-        margin: 0 auto 16px;
+        margin: 0 auto 20px;
       }
     }
   }
@@ -119,7 +143,8 @@ $text-secondary: #94a3b8;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -131,10 +156,19 @@ $text-secondary: #94a3b8;
 .modal.confirm-modal {
   width: 100%;
   max-width: 400px;
-  padding: 24px;
-  background: $bg-card;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  padding: 28px;
+  background: linear-gradient(
+    145deg,
+    rgba(21, 48, 21, 0.9) 0%,
+    rgba(13, 40, 24, 0.95) 100%
+  );
+  border: 1px solid rgba(123, 168, 114, 0.2);
+  border-radius: 24px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(123, 168, 114, 0.1);
 
   .modal-header {
     margin-bottom: 16px;
@@ -143,7 +177,7 @@ $text-secondary: #94a3b8;
       margin: 0;
       color: $text-primary;
       font-size: 20px;
-      font-weight: 600;
+      font-weight: 700;
     }
   }
 
@@ -162,13 +196,13 @@ $text-secondary: #94a3b8;
     }
 
     .warning-text {
-      color: #ef4444;
+      color: #ff6b7a;
       font-size: 14px;
     }
   }
 
   .modal-footer {
-    gap: 16px;
+    gap: 12px;
     display: flex;
     justify-content: flex-end;
   }
@@ -184,12 +218,17 @@ $text-secondary: #94a3b8;
   color: $text-secondary;
   margin-bottom: 16px;
   font-size: 14px;
+  line-height: 1.5;
 }
 
 .modal-error {
-  color: #ef4444;
+  color: #ff6b7a;
   margin-bottom: 16px;
   font-size: 14px;
+  background: rgba(220, 53, 69, 0.1);
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(220, 53, 69, 0.2);
 }
 
 .search-row {
@@ -200,20 +239,23 @@ $text-secondary: #94a3b8;
 
 .search-input {
   flex: 1;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: #232f3e;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(123, 168, 114, 0.2);
+  background-color: rgba(0, 0, 0, 0.2);
   color: $text-primary;
-  font-size: 14px;
+  font-size: 15px;
+  transition: all 0.2s ease;
 
   &::placeholder {
-    color: $text-secondary;
+    color: $text-muted;
   }
 
   &:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: $golf-pale-green;
+    background-color: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
   }
 }
 
@@ -221,54 +263,59 @@ $text-secondary: #94a3b8;
   max-height: 250px;
   overflow-y: auto;
   margin-bottom: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border: 1px solid rgba(123, 168, 114, 0.15);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .search-result-item {
-  padding: 12px;
+  padding: 14px 16px;
   cursor: pointer;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(123, 168, 114, 0.08);
+  transition: all 0.15s ease;
 
   &:last-child {
     border-bottom: none;
   }
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(123, 168, 114, 0.1);
   }
 
   &.selected {
-    background-color: #3b82f6;
+    background: linear-gradient(90deg, rgba(45, 90, 39, 0.4) 0%, rgba(45, 90, 39, 0.2) 100%);
+    border-left: 3px solid $golf-pale-green;
   }
 
   .result-name {
-    color: white;
-    font-weight: 500;
+    color: $text-primary;
+    font-weight: 600;
+    font-size: 15px;
   }
 
   .result-location {
-    font-size: 12px;
-    color: $text-secondary;
+    font-size: 13px;
+    color: $text-muted;
     margin-top: 4px;
   }
 
   .result-tee-info {
     font-size: 12px;
-    color: #60a5fa;
+    color: $golf-pale-green;
     margin-top: 4px;
+    font-weight: 500;
   }
 
   &.selected .result-location,
   &.selected .result-tee-info {
-    color: rgba(255, 255, 255, 0.8);
+    color: $text-secondary;
   }
 }
 
 .modal-actions {
   display: flex;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 24px;
 
   .button-primary,
   .button-secondary {
@@ -289,22 +336,25 @@ $text-secondary: #94a3b8;
 .import-textarea {
   width: 100%;
   height: 200px;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: #232f3e;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(123, 168, 114, 0.2);
+  background-color: rgba(0, 0, 0, 0.2);
   color: $text-primary;
   font-size: 14px;
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
   resize: vertical;
   box-sizing: border-box;
+  transition: all 0.2s ease;
 
   &::placeholder {
-    color: $text-secondary;
+    color: $text-muted;
   }
 
   &:focus {
     outline: none;
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: $golf-pale-green;
+    background-color: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
   }
 }

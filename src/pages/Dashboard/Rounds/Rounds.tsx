@@ -6,7 +6,9 @@ import LocalDataService from "../../../services/LocalDataService.ts";
 import type {Round} from "../../../services/LocalDataService.ts";
 
 import "../../../styles/Pages/Rounds.scss"
+import "../../../styles/Shared/backgrounds.scss"
 import AddRoundModal from "../../../components/AddRoundModal.tsx";
+import golfBg from "../../../assets/golf-bg-4.jpg";
 
 const Rounds = () => {
     const navigate = useNavigate();
@@ -252,6 +254,9 @@ const Rounds = () => {
             }
             siRow.push('-');
 
+            // Track pink ball cells for styling: {rowIndex: {colIndex: true}}
+            const pinkCells: Record<number, Record<number, boolean>> = {};
+
             // Player rows (strokes and points for each)
             const playerRows: string[][] = [];
             round.players.forEach(p => {
@@ -259,6 +264,8 @@ const Rounds = () => {
                 let pointsTotal = 0;
                 const strokesRow = [`${p.name}`];
                 const pointsRow = [`${p.name} Pts`];
+                const strokesRowIndex = playerRows.length + 2; // +2 for par and SI rows
+                const pointsRowIndex = strokesRowIndex + 1;
 
                 for (let h = startHole; h <= endHole; h++) {
                     const holeScore = sortedScores.find(s => s.holeNumber === h);
@@ -269,6 +276,16 @@ const Rounds = () => {
                     pointsTotal += points;
                     strokesRow.push(strokes > 0 ? strokes.toString() : '-');
                     pointsRow.push(points >= 0 && strokes > 0 ? points.toString() : '-');
+
+                    // Check if this player had pink ball on this hole
+                    // Mark both strokes cell AND points cell as pink
+                    if (holeScore?.pinkPlayerId === p.id && points > 0) {
+                        const colIndex = h - startHole + 1; // +1 for label column
+                        if (!pinkCells[strokesRowIndex]) pinkCells[strokesRowIndex] = {};
+                        if (!pinkCells[pointsRowIndex]) pinkCells[pointsRowIndex] = {};
+                        pinkCells[strokesRowIndex][colIndex] = true;
+                        pinkCells[pointsRowIndex][colIndex] = true;
+                    }
                 }
                 strokesRow.push(strokesTotal.toString());
                 pointsRow.push(pointsTotal.toString());
@@ -304,7 +321,7 @@ const Rounds = () => {
                 bodyRows.push(winnerRow);
             }
 
-            return {headers, body: bodyRows};
+            return {headers, body: bodyRows, pinkCells};
         };
 
         // Front 9 table
@@ -318,7 +335,14 @@ const Rounds = () => {
             bodyStyles: {fontSize: 8, halign: 'center'},
             columnStyles: {0: {halign: 'left', fontStyle: 'bold'}},
             margin: {left: 14, right: 14},
-            styles: {cellPadding: 2}
+            styles: {cellPadding: 2},
+            didParseCell: (data) => {
+                // Apply pink background to cells where player had pink ball
+                if (data.row.index !== undefined && front9.pinkCells[data.row.index]?.[data.column.index]) {
+                    data.cell.styles.fillColor = [236, 72, 153]; // Pink color
+                    data.cell.styles.textColor = [255, 255, 255]; // White text
+                }
+            }
         });
 
         // Back 9 table
@@ -338,7 +362,14 @@ const Rounds = () => {
             bodyStyles: {fontSize: 8, halign: 'center'},
             columnStyles: {0: {halign: 'left', fontStyle: 'bold'}},
             margin: {left: 14, right: 14},
-            styles: {cellPadding: 2}
+            styles: {cellPadding: 2},
+            didParseCell: (data) => {
+                // Apply pink background to cells where player had pink ball
+                if (data.row.index !== undefined && back9.pinkCells[data.row.index]?.[data.column.index]) {
+                    data.cell.styles.fillColor = [236, 72, 153]; // Pink color
+                    data.cell.styles.textColor = [255, 255, 255]; // White text
+                }
+            }
         });
 
         // Save the PDF
@@ -347,64 +378,108 @@ const Rounds = () => {
     }
 
     return (
-        <>
-            <div className="rounds-container">
-                <div className="table-container">
-                    <div className="table-header">
-                        <div className="table-cell">Course</div>
-                        <div className="table-cell">Date</div>
-                        <div className="table-cell">Status</div>
-                        <div className="table-cell">Actions</div>
+        <div className="page-with-background">
+            <div
+                className="page-background"
+                style={{backgroundImage: `url(${golfBg})`}}
+            />
+            <div className="page-content">
+                <div className="rounds-container">
+                    <div className="page-header-glass">
+                        <h1>🏆 Rounds</h1>
+                        <span className="count-badge">{rounds.length} round{rounds.length !== 1 ? 's' : ''}</span>
                     </div>
-                    {rounds.map((round, index) => (
-                        <div key={index} className="table-row">
-                            <div className="table-cell">{round.course.name}</div>
-                            <div className="table-cell m-align-right">{formatDate(round.date)}</div>
-                            <div className="table-cell">
-                                <span className={`status-badge ${round.completed ? 'completed' : 'in-progress'}`}>
-                                    {round.completed ? 'Completed' : 'In Progress'}
-                                </span>
-                            </div>
-                            <div className="table-cell actions-cell">
-                                {round.completed ? (
-                                    <>
-                                        <button className="button-icon"
-                                                onClick={() => handleViewRoundClick(round)}
-                                                title="View round">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                <circle cx="12" cy="12" r="3"></circle>
+
+                    <div className="action-bar">
+                        <button className="button-primary" onClick={handleAddRoundClick}>
+                            <span style={{marginRight: '8px'}}>➕</span> Create Round
+                        </button>
+                    </div>
+
+                    {rounds.length === 0 ? (
+                        <div className="empty-state-glass">
+                            <div className="empty-icon">🏆</div>
+                            <h3>No Rounds Yet</h3>
+                            <p>Create your first round to start scoring</p>
+                        </div>
+                    ) : (
+                        <div className="rounds-grid">
+                            {rounds.map((round) => (
+                                <div key={round.id}
+                                     className={`round-card glass-card ${round.completed ? 'completed' : 'in-progress'}`}>
+                                    <div className="card-header">
+                                        <div className="course-info">
+                                            <div className="course-name">{round.course.name}</div>
+                                            <div className="round-meta">
+                                                <span className="meta-item date">{formatDate(round.date)}</span>
+                                                <span
+                                                    className="meta-item scoring-method">{round.scoring_method.name}</span>
+                                            </div>
+                                        </div>
+                                        <div className="status-section">
+                                        <span
+                                            className={`status-badge ${round.completed ? 'completed' : 'in-progress'}`}>
+                                            {round.completed ? 'Completed' : 'In Progress'}
+                                        </span>
+                                            {round.scores.length > 0 && (
+                                                <span className="hole-progress">{round.scores.length}/18</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="card-actions">
+                                        {round.completed ? (
+                                            <>
+                                                <button className="action-btn view"
+                                                        onClick={() => handleViewRoundClick(round)}
+                                                        title="View round">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                        <circle cx="12" cy="12" r="3"></circle>
+                                                    </svg>
+                                                </button>
+                                                <button className="action-btn export"
+                                                        onClick={() => handleExportRound(round)}
+                                                        title="Export to PDF">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                                    </svg>
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button className="action-btn play"
+                                                    onClick={() => handleEditRoundClick(round)}
+                                                    title="Continue round">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                </svg>
+                                            </button>
+                                        )}
+                                        <button className="action-btn danger"
+                                                onClick={() => handleDeleteClick(round)}
+                                                title="Delete round">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                                 strokeLinecap="round" strokeLinejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path
+                                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                                <line x1="14" y1="11" x2="14" y2="17"></line>
                                             </svg>
                                         </button>
-                                        <button className="button-primary m-left-8"
-                                                onClick={() => handleExportRound(round)}>Export
-                                        </button>
-                                    </>
-                                ) : (
-                                    <button className="button-icon"
-                                            onClick={() => handleEditRoundClick(round)}
-                                            title="Continue round">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                        </svg>
-                                    </button>
-                                )}
-                                <button className="button-icon button-danger m-left-8"
-                                        onClick={() => handleDeleteClick(round)}
-                                        title="Delete round">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                                    </svg>
-                                </button>
-                            </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-                <div className="action-buttons">
-                    <button className="button-primary" onClick={handleAddRoundClick}>Create round</button>
+                    )}
                 </div>
             </div>
             {showRoundModal && <AddRoundModal
@@ -419,17 +494,19 @@ const Rounds = () => {
                             <h2>Delete Round</h2>
                         </div>
                         <div className="modal-body">
-                            <p>Are you sure you want to delete this round at <strong>{roundToDelete.course.name}</strong> on <strong>{formatDate(roundToDelete.date)}</strong>?</p>
+                            <p>Are you sure you want to delete this round
+                                at <strong>{roundToDelete.course.name}</strong> on <strong>{formatDate(roundToDelete.date)}</strong>?
+                            </p>
                             <p className="warning-text">This action cannot be undone.</p>
                         </div>
                         <div className="modal-footer">
                             <button className="button-secondary" onClick={handleCancelDelete}>Cancel</button>
-                            <button className="button-danger m-left-8" onClick={handleConfirmDelete}>Delete</button>
+                            <button className="button-danger" onClick={handleConfirmDelete}>Delete</button>
                         </div>
                     </div>
                 </div>
             )}
-        </>
+        </div>
     )
 
 }

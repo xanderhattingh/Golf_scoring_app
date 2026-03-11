@@ -4,12 +4,15 @@ import LocalDataService from '../../../services/LocalDataService';
 import type {Round, HoleScore, PlayerScore} from '../../../services/LocalDataService';
 import NumberPicker from '../../../components/NumberPicker';
 import '../../../styles/Pages/RoundDetail.scss';
+import '../../../styles/Shared/backgrounds.scss';
+import golfBg from '../../../assets/golf-bg.jpg';
 
 const calculateStablefordPoints = (
     strokes: number,
     par: number,
     strokeIndex: number,
-    handicap: number
+    handicap: number,
+    hasPinkBall: boolean = false
 ): number => {
     if (strokes <= 0) return 0;
 
@@ -19,15 +22,28 @@ const calculateStablefordPoints = (
     const additionalStroke = handicap > 18 && strokeIndex <= (handicap - 18) ? 1 : 0;
 
     const adjustedStrokes = strokes - extraStrokes - additionalStroke;
-    const diff = adjustedStrokes - par;
 
-    // Points: albatross=5, eagle=4, birdie=3, par=2, bogey=1, double bogey+=0
-    if (diff <= -3) return 5;  // Albatross or better
-    if (diff === -2) return 4;  // Eagle
-    if (diff === -1) return 3;  // Birdie
-    if (diff === 0) return 2;   // Par
-    if (diff === 1) return 1;   // Bogey
-    return 0;                    // Double bogey or worse
+    // Calculate points dynamically based on strokes relative to par
+    // Formula: 2 points for par, +1 for each stroke under, -1 for each stroke over
+    // Double bogey or worse = 0 points
+    let points = 0;
+
+    if (adjustedStrokes > par + 2) {
+        // Triple bogey or worse = 0 points
+        points = 0;
+    } else {
+        // Calculate points: 2 + (par - adjustedStrokes)
+        // Par = 2, Birdie = 3, Eagle = 4, Albatross = 5, Condor = 6, etc.
+        // Bogey = 1, Double bogey = 0
+        points = 2 + (par - adjustedStrokes);
+    }
+
+    // Double points if player has pink ball (Stableford with Pink)
+    if (hasPinkBall) {
+        points = points * 2;
+    }
+
+    return points;
 };
 
 const RoundDetail = () => {
@@ -36,6 +52,7 @@ const RoundDetail = () => {
     const [round, setRound] = useState<Round | null>(null);
     const [currentHole, setCurrentHole] = useState(1);
     const [currentScores, setCurrentScores] = useState<Record<number, number>>({});
+    const [currentPinkPlayer, setCurrentPinkPlayer] = useState<number | null>(null);
 
     const dataService = useMemo(() => new LocalDataService(), []);
 
@@ -86,32 +103,102 @@ const RoundDetail = () => {
                     scores[ps.playerId] = ps.strokes;
                 });
                 setCurrentScores(scores);
+                // Load pink player if exists (for Stableford with Pink)
+                if (round.scoring_method.id === 4 && existingHoleScore.pinkPlayerId) {
+                    setCurrentPinkPlayer(existingHoleScore.pinkPlayerId);
+                } else {
+                    setCurrentPinkPlayer(null);
+                }
             } else {
                 setCurrentScores({});
+                setCurrentPinkPlayer(null);
             }
         }
     }, [currentHole, round]);
 
     if (!round) {
-        return <div className="round-detail-container">
-            <div className="loading">Loading...</div>
+        return <div className="page-with-background round-detail-page">
+            <div
+                className="page-background"
+                style={{backgroundImage: `url(${golfBg})`}}
+            />
+            <div className="page-content round-detail-container">
+                <div className="loading">Loading...</div>
+            </div>
         </div>;
     }
 
     const currentHoleData = round.course.holes.find(h => h.hole_number === currentHole);
+
+    // Check if this is Stableford with Pink scoring method
+    const isStablefordPink = round.scoring_method.id === 4;
+
+    // Get pink player for current hole
+    const getCurrentHolePinkPlayer = (): number | null => {
+        const holeScore = round.scores.find(s => s.holeNumber === currentHole);
+        return holeScore?.pinkPlayerId || null;
+    };
+
+    // Set pink player for current hole
+    const handlePinkPlayerChange = (playerId: number) => {
+        setCurrentPinkPlayer(playerId);
+
+        // Recalculate points for all players on this hole when pink player changes
+        if (currentHoleData) {
+            const existingHoleScore = round.scores.find(s => s.holeNumber === currentHole);
+            if (existingHoleScore) {
+                const recalculatedScores = existingHoleScore.playerScores.map(ps => {
+                    const hasPinkBall = ps.playerId === playerId;
+                    return {
+                        ...ps,
+                        points: calculateStablefordPoints(
+                            ps.strokes,
+                            currentHoleData.hole_par,
+                            currentHoleData.hole_stroke,
+                            getPlayerHandicap(ps.playerId),
+                            hasPinkBall
+                        )
+                    };
+                });
+
+                const newHoleScore: HoleScore = {
+                    holeNumber: currentHole,
+                    playerScores: recalculatedScores,
+                    pinkPlayerId: playerId
+                };
+
+                const newScores = [...round.scores.filter(s => s.holeNumber !== currentHole)];
+                newScores.push(newHoleScore);
+
+                const updatedRound: Round = {
+                    ...round,
+                    scores: newScores
+                };
+
+                dataService.updateRound(updatedRound);
+                setRound(updatedRound);
+            }
+        }
+    };
 
     const getPlayerHandicap = (playerId: number): number => {
         const player = round.players.find(p => p.id === playerId);
         return player?.handicap || 0;
     };
 
-    const calculatePlayerPoints = (playerId: number, strokes: number): number => {
+    const calculatePlayerPoints = (playerId: number, strokes: number, forDisplay: boolean = true): number => {
         if (!currentHoleData || strokes <= 0) return 0;
+        // When displaying current hole, use selected pink player
+        // When calculating for submission, use the stored/current value
+        const hasPinkBall = isStablefordPink && (forDisplay
+            ? currentPinkPlayer === playerId
+            : getCurrentHolePinkPlayer() === playerId);
         return calculateStablefordPoints(
             strokes,
             currentHoleData.hole_par,
             currentHoleData.hole_stroke,
-            getPlayerHandicap(playerId)
+            getPlayerHandicap(playerId),
+            hasPinkBall
         );
     };
 
@@ -320,27 +407,16 @@ const RoundDetail = () => {
         return (
             <div className="status-section">
                 <div className="status-title">
-                    {'Strokes'}
+                    {'Strokes/Points'}
                 </div>
                 <div className="player-scores">
                     {round.players.map(player => (
                         <div key={player.id} className="score-item">
                             <span className="name">{player.name}</span>
-                            <span className="value">{playerTotals[player.id]?.strokes || 0}
+                            <span
+                                className="value">{playerTotals[player.id]?.strokes || 0}/{playerTotals[player.id]?.points || 0}
                             </span>
-                        </div>
-
-
-                    ))}
-                </div>
-                <div className="status-title margin-t-20">
-                    {'Points'}
-                </div>
-                <div className="player-scores">
-                    {round.players.map(player => (
-                        <div key={player.id} className="score-item">
-                            <span className="value">{playerTotals[player.id]?.points || 0}</span>
-
+                            <span className="value"></span>
                         </div>
 
 
@@ -352,69 +428,141 @@ const RoundDetail = () => {
 
     const handleScoreChange = (playerId: number, value: number) => {
         setCurrentScores(prev => ({...prev, [playerId]: value}));
+
+        // Auto-save when a valid score is entered
+        if (value > 0 && currentHoleData) {
+            // Use a timeout to batch rapid changes
+            setTimeout(() => {
+                autoSaveScore(playerId, value);
+            }, 300);
+        }
     };
 
-    const handleSubmitHole = () => {
+    const autoSaveScore = (playerId: number, strokes: number) => {
         if (!currentHoleData) return;
 
-        const playerScores: PlayerScore[] = round.players.map(player => {
-            const strokes = currentScores[player.id] || 0;
-            const points = calculateStablefordPoints(
-                strokes,
-                currentHoleData.hole_par,
-                currentHoleData.hole_stroke,
-                player.handicap
+        const hasPinkBall = isStablefordPink && currentPinkPlayer === playerId;
+        const points = calculateStablefordPoints(
+            strokes,
+            currentHoleData.hole_par,
+            currentHoleData.hole_stroke,
+            getPlayerHandicap(playerId),
+            hasPinkBall
+        );
+
+        // Get current hole scores
+        const existingHoleScore = round.scores.find(s => s.holeNumber === currentHole);
+        let updatedPlayerScores: PlayerScore[];
+
+        if (existingHoleScore) {
+            // Update existing score for this player, keep others
+            updatedPlayerScores = existingHoleScore.playerScores.map(ps =>
+                ps.playerId === playerId
+                    ? {...ps, strokes, points}
+                    : ps
             );
-            return {team_id: null, playerId: player.id, strokes, points};
-        });
+
+            // Add new player score if not exists
+            if (!updatedPlayerScores.find(ps => ps.playerId === playerId)) {
+                updatedPlayerScores.push({
+                    team_id: null,
+                    playerId,
+                    strokes,
+                    points
+                });
+            }
+        } else {
+            // Create new hole score with this player
+            updatedPlayerScores = [{
+                team_id: null,
+                playerId,
+                strokes,
+                points
+            }];
+        }
+
+        // Assign team IDs if in team mode
+        if (round.teams) {
+            updatedPlayerScores.forEach((playerScore) => {
+                round.teams!.forEach((team) => {
+                    if (team.playerIds.includes(playerScore.playerId)) {
+                        playerScore.team_id = team.id;
+                    }
+                });
+            });
+        }
 
         const holeScore: HoleScore = {
             holeNumber: currentHole,
-            playerScores
+            playerScores: updatedPlayerScores,
+            pinkPlayerId: isStablefordPink ? currentPinkPlayer : null
         };
 
-        if (round.teams) {
-            holeScore.playerScores.forEach((playerScore) => {
-                round.teams.forEach((team) => {
-                    team.playerIds.forEach((playerId) => {
-                        if (playerScore.playerId === playerId) {
-                            //We need to assign the team so that we can see what team won
-                            playerScore.team_id = team.id;
-                        }
-                    })
-                })
-            })
-        }
-
-
-        // Update or add hole score
-        const updatedScores = [...round.scores];
-        const existingIndex = updatedScores.findIndex(s => s.holeNumber === currentHole);
-        if (existingIndex >= 0) {
-            updatedScores[existingIndex] = holeScore;
-        } else {
-            updatedScores.push(holeScore);
-        }
-
-        // Auto-advance to next hole
-        const nextHole = currentHole === 18 ? 1 : currentHole + 1;
+        // Update round
+        const updatedScores = [...round.scores.filter(s => s.holeNumber !== currentHole)];
+        updatedScores.push(holeScore);
 
         const updatedRound: Round = {
             ...round,
-            scores: updatedScores,
-            currentHole: nextHole
+            scores: updatedScores
         };
 
         dataService.updateRound(updatedRound);
         setRound(updatedRound);
-        setCurrentHole(nextHole);
+    };
 
-        // Scroll to top to show updated match status after DOM updates
-        setTimeout(() => {
-            window.scrollTo(0, 0);
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-        }, 100);
+    // Handle hole data changes (par and stroke index)
+    const handleHoleDataChange = (field: 'hole_par' | 'hole_stroke', value: number) => {
+        if (!currentHoleData) return;
+
+        const updatedHoles = round.course.holes.map(h =>
+            h.hole_number === currentHole
+                ? {...h, [field]: value}
+                : h
+        );
+
+        const updatedRound: Round = {
+            ...round,
+            course: {
+                ...round.course,
+                holes: updatedHoles
+            }
+        };
+
+        dataService.updateRound(updatedRound);
+        setRound(updatedRound);
+
+        // Recalculate points for this hole if scores exist
+        const holeScore = round.scores.find(s => s.holeNumber === currentHole);
+        if (holeScore) {
+            const recalculatedScores = holeScore.playerScores.map(ps => ({
+                ...ps,
+                points: calculateStablefordPoints(
+                    ps.strokes,
+                    field === 'hole_par' ? value : currentHoleData.hole_par,
+                    field === 'hole_stroke' ? value : currentHoleData.hole_stroke,
+                    getPlayerHandicap(ps.playerId),
+                    isStablefordPink && currentPinkPlayer === ps.playerId
+                )
+            }));
+
+            const newHoleScore: HoleScore = {
+                holeNumber: currentHole,
+                playerScores: recalculatedScores,
+                pinkPlayerId: isStablefordPink ? currentPinkPlayer : null
+            };
+
+            const newScores = [...round.scores.filter(s => s.holeNumber !== currentHole)];
+            newScores.push(newHoleScore);
+
+            const finalRound: Round = {
+                ...updatedRound,
+                scores: newScores
+            };
+
+            dataService.updateRound(finalRound);
+            setRound(finalRound);
+        }
     };
 
     const handleFinishRound = () => {
@@ -423,20 +571,98 @@ const RoundDetail = () => {
         navigate('/dashboard/rounds');
     };
 
+    // Navigate to next hole
+    // Save all current hole scores to the round
+    const saveCurrentHoleScores = () => {
+        if (!currentHoleData) return;
+
+        let updatedPlayerScores: PlayerScore[] = [];
+
+        // Save ALL players - use their entered score or default to par
+        round.players.forEach(player => {
+            // Use entered score if available, otherwise use par as default
+            const strokes = currentScores[player.id] || currentHoleData.hole_par;
+            if (strokes <= 0) return;
+
+            const hasPinkBall = isStablefordPink && currentPinkPlayer === player.id;
+            const points = calculateStablefordPoints(
+                strokes,
+                currentHoleData.hole_par,
+                currentHoleData.hole_stroke,
+                getPlayerHandicap(player.id),
+                hasPinkBall
+            );
+
+            updatedPlayerScores.push({
+                team_id: null,
+                playerId: player.id,
+                strokes,
+                points
+            });
+        });
+
+        // Assign team IDs if in team mode
+        if (round.teams) {
+            updatedPlayerScores.forEach((playerScore) => {
+                round.teams!.forEach((team) => {
+                    if (team.playerIds.includes(playerScore.playerId)) {
+                        playerScore.team_id = team.id;
+                    }
+                });
+            });
+        }
+
+        const holeScore: HoleScore = {
+            holeNumber: currentHole,
+            playerScores: updatedPlayerScores,
+            pinkPlayerId: isStablefordPink ? currentPinkPlayer : null
+        };
+
+        // Update round
+        const updatedScores = [...round.scores.filter(s => s.holeNumber !== currentHole)];
+        updatedScores.push(holeScore);
+
+        const updatedRound: Round = {
+            ...round,
+            scores: updatedScores
+        };
+
+        dataService.updateRound(updatedRound);
+        setRound(updatedRound);
+    };
+
+    const handleNextHole = () => {
+        // Save all current scores before navigating
+        saveCurrentHoleScores();
+
+        const nextHole = currentHole === 18 ? 1 : currentHole + 1;
+        setCurrentHole(nextHole);
+    };
+
+    const handleNavigateHole = (newHole: number) => {
+        // Save all current scores before navigating
+        saveCurrentHoleScores();
+        setCurrentHole(newHole);
+    };
+
     const allHolesScored = round.scores.length === 18;
-    const allPlayersHaveScores = round.players.every(p => currentScores[p.id] && currentScores[p.id] > 0);
 
     const renderScoreInputs = () => {
         if (round.format === 'teams' && round.teams) {
             return round.teams.map(team => (
                 <div key={team.id} className="team-group">
-                    <h4>{team.name}</h4>
+                    <div className="team-header">
+                        <span className="team-flag">{team.id === 1 ? '🔴' : '🔵'}</span>
+                        <h4>{team.name}</h4>
+                    </div>
                     {round.players
                         .filter(p => team.playerIds.includes(p.id))
                         .map(player => (
                             <div key={player.id} className="player-score-input">
-                                <span className="player-name">{player.name}</span>
-                                <span className="player-handicap">HC: {player.handicap}</span>
+                                <div className="player-info">
+                                    <span className="player-name">{player.name}</span>
+                                    <span className="player-handicap">HCP {player.handicap}</span>
+                                </div>
                                 <NumberPicker
                                     value={currentScores[player.id]}
                                     placeholder={currentHoleData?.hole_par}
@@ -445,12 +671,22 @@ const RoundDetail = () => {
                                     onChange={(val) => handleScoreChange(player.id, val)}
                                     label={player.name}
                                 />
-                                <span className="points-display">
-                                    {currentScores[player.id] && currentScores[player.id] > 0
-                                        ? `${calculatePlayerPoints(player.id, currentScores[player.id])} pts`
-                                        : '-'
-                                    }
-                                </span>
+                                <div className="points-display">
+                                    {(() => {
+                                        const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
+                                        const isDefault = !currentScores[player.id];
+                                        return (
+                                            <>
+                                                <span className={isDefault ? 'points-default' : ''}>
+                                                    {calculatePlayerPoints(player.id, strokes, true)}
+                                                </span>
+                                                {isStablefordPink && currentPinkPlayer === player.id && (
+                                                    <span className="points-multiplier">2x</span>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
                             </div>
                         ))
                     }
@@ -471,75 +707,124 @@ const RoundDetail = () => {
                     label={player.name}
                 />
                 <span className="points-display">
-                    {currentScores[player.id] && currentScores[player.id] > 0
-                        ? `${calculatePlayerPoints(player.id, currentScores[player.id])} pts`
-                        : '-'
-                    }
+                    {(() => {
+                        const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
+                        const isDefault = !currentScores[player.id];
+                        return (
+                            <span className={isDefault ? 'points-default' : ''}>
+                                {calculatePlayerPoints(player.id, strokes)} pts
+                            </span>
+                        );
+                    })()}
                 </span>
             </div>
         ));
     };
 
     return (
-        <div className="round-detail-container">
-            <div/>
-            <div className="round-header">
-                <button className="back-button" onClick={() => navigate('/dashboard/rounds')}>
-                    &larr; Back to Rounds
-                </button>
-                <div className="round-info">
-                    <h2>{round.course.name}</h2>
-                    <span className="scoring-method">{round.scoring_method.name}</span>
-                    {round.format === 'teams' && <span className="format-badge">Team Format</span>}
-                </div>
-            </div>
-
-            {renderStatus()}
-
-            <div className="current-hole-section">
-                <div className="hole-selector">
-                    <button
-                        onClick={() => setCurrentHole(currentHole === 1 ? 18 : currentHole - 1)}
-                    >
-                        &lt;
+        <div className="page-with-background round-detail-page">
+            <div
+                className="page-background"
+                style={{backgroundImage: `url(${golfBg})`}}
+            />
+            <div className="page-content round-detail-container">
+                <div className="round-header">
+                    <button className="back-button" onClick={() => navigate('/dashboard/rounds')}>
+                        &larr; Back to Rounds
                     </button>
-                    <span>Hole {currentHole}</span>
-                    <button
-                        onClick={() => setCurrentHole(currentHole === 18 ? 1 : currentHole + 1)}
-                    >
-                        &gt;
-                    </button>
+                    <div className="round-info">
+                        <h2>⛳ {round.course.name}</h2>
+                        <div className="meta-badges">
+                            <span className="scoring-method">{round.scoring_method.name}</span>
+                            {round.format === 'teams' && <span className="format-badge">Team Format</span>}
+                        </div>
+                    </div>
                 </div>
 
-                <div className="hole-info">
-                    <span>Par: {currentHoleData?.hole_par}</span>
-                    <span>Stroke Index: {currentHoleData?.hole_stroke}</span>
+                {renderStatus()}
+
+                <div className="current-hole-section">
+                    <div className="hole-selector">
+                        <button
+                            onClick={() => handleNavigateHole(currentHole === 1 ? 18 : currentHole - 1)}
+                        >
+                            &lt;
+                        </button>
+                        <span>Hole {currentHole}</span>
+                        <button
+                            onClick={() => handleNavigateHole(currentHole === 18 ? 1 : currentHole + 1)}
+                        >
+                            &gt;
+                        </button>
+                    </div>
+
+                    <div className="hole-info editable">
+                        <div className="info-badge par editable">
+                            <span className="label">Par</span>
+                            <NumberPicker
+                                value={currentHoleData?.hole_par}
+                                placeholder={4}
+                                min={3}
+                                max={5}
+                                onChange={(value) => handleHoleDataChange('hole_par', value)}
+                                title="Select Par"
+                            />
+                        </div>
+                        <div className="info-badge stroke-index editable">
+                            <span className="label">Stroke Index</span>
+                            <NumberPicker
+                                value={currentHoleData?.hole_stroke}
+                                placeholder={1}
+                                min={1}
+                                max={18}
+                                onChange={(value) => handleHoleDataChange('hole_stroke', value)}
+                                title="Select Stroke Index"
+                            />
+                        </div>
+                    </div>
+
+                    {isStablefordPink && (
+                        <div className="pink-ball-section">
+                            <label className="pink-ball-label">Pink Ball (Double Points):</label>
+                            <div className="pink-ball-players">
+                                {round.players.map(player => (
+                                    <button
+                                        key={player.id}
+                                        type="button"
+                                        className={`pink-ball-btn ${currentPinkPlayer === player.id ? 'selected' : ''}`}
+                                        onClick={() => handlePinkPlayerChange(player.id)}
+                                    >
+                                        {player.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="score-inputs">
+                        {renderScoreInputs()}
+                    </div>
+
                 </div>
 
-                <div className="score-inputs">
-                    {renderScoreInputs()}
+                {/* Fixed bottom action bar for easy thumb access */}
+                <div className="fixed-action-bar">
+                    {allHolesScored && !round.completed ? (
+                        <button
+                            className="button-primary finish-button"
+                            onClick={handleFinishRound}
+                        >
+                            ✅ Finish Round
+                        </button>
+                    ) : (
+                        <button
+                            className="button-secondary"
+                            onClick={handleNextHole}
+                        >
+                            Next Hole →
+                        </button>
+                    )}
                 </div>
-
-            </div>
-
-            {/* Fixed bottom action bar for easy thumb access */}
-            <div className="fixed-action-bar">
-                {allHolesScored && !round.completed ? (
-                    <button
-                        className="button-primary finish-button"
-                        onClick={handleFinishRound}
-                    >
-                        Finish Round
-                    </button>
-                ) : (
-                    <button
-                        className="button-primary"
-                        onClick={handleSubmitHole}
-                        disabled={!allPlayersHaveScores}
-                    >
-                        Submit Hole {currentHole}
-                    </button>
-                )}
             </div>
         </div>
     );

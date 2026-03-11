@@ -408,7 +408,8 @@ $text-muted: #64748b;
             cursor: pointer;
           }
 
-          span {
+          label {
+            margin-bottom: 0;
             font-size: 15px;
           }
         }

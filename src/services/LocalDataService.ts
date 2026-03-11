@@ -8,7 +8,8 @@ const STORAGE_KEYS = {
 const DEFAULT_SCORING_METHODS = [
     {id: 1, name: 'Stroke Play', description: 'Total strokes for the round'},
     {id: 2, name: 'Stableford', description: 'Points based on score relative to par'},
-    {id: 3, name: 'Match Play', description: 'Hole-by-hole competition'}
+    {id: 3, name: 'Match Play', description: 'Hole-by-hole competition'},
+    {id: 4, name: 'Stableford with Pink', description: 'One player per hole gets double points with the pink ball'}
 ];
 
 export interface Hole {
@@ -47,6 +48,7 @@ export interface PlayerScore {
 export interface HoleScore {
     holeNumber: number;
     playerScores: PlayerScore[];
+    pinkPlayerId?: number | null; // Player with pink ball for this hole (Stableford with Pink)
 }
 
 export interface Round {

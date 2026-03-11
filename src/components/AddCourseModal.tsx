@@ -168,7 +168,7 @@ const AddCourseModal = (props) => {
                                     onChange={(e) => setBulkPars(e.target.value)}
                                     className="bulk-input"
                                 />
-                                <button type="button" onClick={applyBulkPars} className="bulk-apply-btn">
+                                <button type="button" onClick={applyBulkPars} className="button-primary">
                                     Apply Pars
                                 </button>
                             </div>
@@ -180,7 +180,7 @@ const AddCourseModal = (props) => {
                                     onChange={(e) => setBulkStrokes(e.target.value)}
                                     className="bulk-input"
                                 />
-                                <button type="button" onClick={applyBulkStrokes} className="bulk-apply-btn">
+                                <button type="button" onClick={applyBulkStrokes} className="button-primary">
                                     Apply Strokes
                                 </button>
                             </div>
