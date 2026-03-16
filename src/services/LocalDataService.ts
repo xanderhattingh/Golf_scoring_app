@@ -9,7 +9,9 @@ const DEFAULT_SCORING_METHODS = [
     {id: 1, name: 'Stroke Play', description: 'Total strokes for the round'},
     {id: 2, name: 'Stableford', description: 'Points based on score relative to par'},
     {id: 3, name: 'Match Play', description: 'Hole-by-hole competition'},
-    {id: 4, name: 'Stableford with Pink', description: 'One player per hole gets double points with the pink ball'}
+    {id: 4, name: 'Stableford with Pink', description: 'One player per hole gets double points with the pink ball'},
+    {id: 5, name: 'Stableford with Animals', description: 'Stableford with Tree, Water, Bunker, and 3-Putt tracking per 9 holes'},
+    {id: 6, name: 'Stableford with Animals and Pink', description: 'Stableford with Animals plus Pink Ball double points'}
 ];
 
 export interface Hole {
@@ -45,10 +47,25 @@ export interface PlayerScore {
     points: number;
 }
 
+export type AnimalType = 'tree' | 'water' | 'bunker' | 'three_putt';
+
+export interface AnimalEvent {
+    playerId: number;
+    animalType: AnimalType;
+    holeNumber: number;
+    timestamp: string;
+}
+
 export interface HoleScore {
     holeNumber: number;
     playerScores: PlayerScore[];
     pinkPlayerId?: number | null; // Player with pink ball for this hole (Stableford with Pink)
+    animalEvents?: AnimalEvent[]; // Animal events for this hole
+}
+
+export interface AnimalHolders {
+    front9: Record<AnimalType, { playerId: number; holeNumber: number } | null>;
+    back9: Record<AnimalType, { playerId: number; holeNumber: number } | null>;
 }
 
 export interface Round {
@@ -63,6 +80,7 @@ export interface Round {
     teams?: Team[];
     scores: HoleScore[];
     currentHole: number;
+    animalHolders?: AnimalHolders; // Current animal holders for front9 and back9
 }
 
 export interface ScoringMethod {
@@ -242,6 +260,8 @@ export default class LocalDataService {
             throw {status: 404, message: 'Scoring method not found'};
         }
 
+        const isAnimalScoring = scoringMethod.id === 5 || scoringMethod.id === 6;
+        
         const newRound: Round = {
             id: generateId(),
             course,
@@ -257,7 +277,13 @@ export default class LocalDataService {
                 playerIds: t.playerIds
             })),
             scores: [],
-            currentHole: 1
+            currentHole: 1,
+            ...(isAnimalScoring && {
+                animalHolders: {
+                    front9: { tree: null, water: null, bunker: null, three_putt: null },
+                    back9: { tree: null, water: null, bunker: null, three_putt: null }
+                }
+            })
         };
         rounds.push(newRound);
         saveToStorage(STORAGE_KEYS.ROUNDS, rounds);

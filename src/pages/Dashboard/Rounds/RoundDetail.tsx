@@ -1,7 +1,7 @@
 import {useEffect, useState, useMemo} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
 import LocalDataService from '../../../services/LocalDataService';
-import type {Round, HoleScore, PlayerScore} from '../../../services/LocalDataService';
+import type {Round, HoleScore, PlayerScore, AnimalType, AnimalEvent} from '../../../services/LocalDataService';
 import NumberPicker from '../../../components/NumberPicker';
 import '../../../styles/Pages/RoundDetail.scss';
 import '../../../styles/Shared/backgrounds.scss';
@@ -53,6 +53,7 @@ const RoundDetail = () => {
     const [currentHole, setCurrentHole] = useState(1);
     const [currentScores, setCurrentScores] = useState<Record<number, number>>({});
     const [currentPinkPlayer, setCurrentPinkPlayer] = useState<number | null>(null);
+    const [currentAnimalEvents, setCurrentAnimalEvents] = useState<AnimalEvent[]>([]);
 
     const dataService = useMemo(() => new LocalDataService(), []);
 
@@ -97,21 +98,29 @@ const RoundDetail = () => {
     useEffect(() => {
         if (round) {
             const existingHoleScore = round.scores.find(s => s.holeNumber === currentHole);
+            const hasAnimalScoring = round.scoring_method.id === 5 || round.scoring_method.id === 6;
             if (existingHoleScore) {
                 const scores: Record<number, number> = {};
                 existingHoleScore.playerScores.forEach(ps => {
                     scores[ps.playerId] = ps.strokes;
                 });
                 setCurrentScores(scores);
-                // Load pink player if exists (for Stableford with Pink)
-                if (round.scoring_method.id === 4 && existingHoleScore.pinkPlayerId) {
+                // Load pink player if exists (for Stableford with Pink or Animals and Pink)
+                if ((round.scoring_method.id === 4 || round.scoring_method.id === 6) && existingHoleScore.pinkPlayerId) {
                     setCurrentPinkPlayer(existingHoleScore.pinkPlayerId);
                 } else {
                     setCurrentPinkPlayer(null);
                 }
+                // Load animal events if exists
+                if (hasAnimalScoring && existingHoleScore.animalEvents) {
+                    setCurrentAnimalEvents(existingHoleScore.animalEvents);
+                } else {
+                    setCurrentAnimalEvents([]);
+                }
             } else {
                 setCurrentScores({});
                 setCurrentPinkPlayer(null);
+                setCurrentAnimalEvents([]);
             }
         }
     }, [currentHole, round]);
@@ -132,6 +141,32 @@ const RoundDetail = () => {
 
     // Check if this is Stableford with Pink scoring method
     const isStablefordPink = round.scoring_method.id === 4;
+
+    // Check if this is an animal scoring method
+    const isAnimalScoring = round.scoring_method.id === 5 || round.scoring_method.id === 6;
+
+    // Check if this is Stableford with Animals and Pink
+    const isAnimalsAndPink = round.scoring_method.id === 6;
+
+    // Get scoring method class name for styling
+    const getScoringMethodClass = (): string => {
+        switch (round.scoring_method.id) {
+            case 1:
+                return 'scoring-stroke-play';
+            case 2:
+                return 'scoring-stableford';
+            case 3:
+                return 'scoring-match-play';
+            case 4:
+                return 'scoring-stableford-pink';
+            case 5:
+                return 'scoring-animals';
+            case 6:
+                return 'scoring-animals-pink';
+            default:
+                return 'scoring-default';
+        }
+    };
 
     // Get pink player for current hole
     const getCurrentHolePinkPlayer = (): number | null => {
@@ -190,7 +225,7 @@ const RoundDetail = () => {
         if (!currentHoleData || strokes <= 0) return 0;
         // When displaying current hole, use selected pink player
         // When calculating for submission, use the stored/current value
-        const hasPinkBall = isStablefordPink && (forDisplay
+        const hasPinkBall = (isStablefordPink || isAnimalsAndPink) && (forDisplay
             ? currentPinkPlayer === playerId
             : getCurrentHolePinkPlayer() === playerId);
         return calculateStablefordPoints(
@@ -200,6 +235,150 @@ const RoundDetail = () => {
             getPlayerHandicap(playerId),
             hasPinkBall
         );
+    };
+
+    // Animal tracking functions
+    const getAnimalEmoji = (animalType: AnimalType): string => {
+        switch (animalType) {
+            case 'tree':
+                return '🌳';
+            case 'water':
+                return '💧';
+            case 'bunker':
+                return '🏖️';
+            case 'three_putt':
+                return '⛳';
+        }
+    };
+
+    const getAnimalLabel = (animalType: AnimalType): string => {
+        switch (animalType) {
+            case 'tree':
+                return 'Tree';
+            case 'water':
+                return 'Water';
+            case 'bunker':
+                return 'Bunker';
+            case 'three_putt':
+                return '3-Putt';
+        }
+    };
+
+
+    const handleAnimalToggle = (playerId: number, animalType: AnimalType) => {
+        if (!isAnimalScoring) return;
+
+        // Check if this player already has this animal on this hole
+        const existingEvent = currentAnimalEvents.find(
+            e => e.playerId === playerId && e.animalType === animalType
+        );
+
+        let updatedEvents: AnimalEvent[];
+        if (existingEvent) {
+            // Remove the event (toggle off)
+            updatedEvents = currentAnimalEvents.filter(e => e !== existingEvent);
+        } else {
+            // Remove this animal type from any other player on this hole (only one player can have each animal)
+            const eventsWithoutThisAnimal = currentAnimalEvents.filter(
+                e => !(e.animalType === animalType && e.playerId !== playerId)
+            );
+
+            // Add new event
+            const newEvent: AnimalEvent = {
+                playerId,
+                animalType,
+                holeNumber: currentHole,
+                timestamp: new Date().toISOString()
+            };
+            updatedEvents = [...eventsWithoutThisAnimal, newEvent];
+        }
+
+        setCurrentAnimalEvents(updatedEvents);
+
+        // Update the round with the new animal event and update animal holder
+        const existingHoleScore = round.scores.find(s => s.holeNumber === currentHole);
+
+        // Update animal holders
+        const updatedAnimalHolders = {...round.animalHolders};
+        if (!updatedAnimalHolders) {
+            updatedAnimalHolders.front9 = {tree: null, water: null, bunker: null, three_putt: null};
+            updatedAnimalHolders.back9 = {tree: null, water: null, bunker: null, three_putt: null};
+        }
+
+        const isFront9 = currentHole <= 9;
+        const nine = isFront9 ? 'front9' : 'back9';
+
+        // If adding event, update the holder
+        if (!existingEvent) {
+            updatedAnimalHolders[nine] = {
+                ...updatedAnimalHolders[nine],
+                [animalType]: {playerId, holeNumber: currentHole}
+            };
+        } else {
+            // If removing, need to find the previous holder from earlier holes
+            // Look at all holes in this 9, sorted by hole number descending
+            const nineHoles = isFront9 ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : [10, 11, 12, 13, 14, 15, 16, 17, 18];
+            let previousHolder: { playerId: number; holeNumber: number } | null = null;
+
+            for (const h of nineHoles.slice(0, nineHoles.indexOf(currentHole)).reverse()) {
+                const holeScore = round.scores.find(s => s.holeNumber === h);
+                if (holeScore?.animalEvents) {
+                    const earlierEvent = holeScore.animalEvents
+                        .filter(e => e.animalType === animalType)
+                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+                    if (earlierEvent) {
+                        previousHolder = {playerId: earlierEvent.playerId, holeNumber: earlierEvent.holeNumber};
+                        break;
+                    }
+                }
+            }
+
+            updatedAnimalHolders[nine] = {
+                ...updatedAnimalHolders[nine],
+                [animalType]: previousHolder
+            };
+        }
+
+        const holeScore: HoleScore = {
+            holeNumber: currentHole,
+            playerScores: existingHoleScore?.playerScores || [],
+            pinkPlayerId: (isStablefordPink || isAnimalsAndPink) ? currentPinkPlayer : null,
+            animalEvents: updatedEvents
+        };
+
+        const updatedScores = [...round.scores.filter(s => s.holeNumber !== currentHole)];
+        updatedScores.push(holeScore);
+
+        const updatedRound: Round = {
+            ...round,
+            scores: updatedScores,
+            animalHolders: updatedAnimalHolders
+        };
+
+        dataService.updateRound(updatedRound);
+        setRound(updatedRound);
+    };
+
+    const hasAnimalEvent = (playerId: number, animalType: AnimalType): boolean => {
+        return currentAnimalEvents.some(e => e.playerId === playerId && e.animalType === animalType);
+    };
+
+    const getAnimalHistory = (animalType: AnimalType, isFront9: boolean): AnimalEvent[] => {
+        const history: AnimalEvent[] = [];
+        const startHole = isFront9 ? 1 : 10;
+        const endHole = isFront9 ? 9 : 18;
+
+        for (let h = startHole; h <= endHole; h++) {
+            const holeScore = round.scores.find(s => s.holeNumber === h);
+            if (holeScore?.animalEvents) {
+                holeScore.animalEvents
+                    .filter(e => e.animalType === animalType)
+                    .forEach(e => history.push(e));
+            }
+        }
+
+        // Sort by timestamp
+        return history.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     };
 
     // Calculate totals for status display
@@ -318,6 +497,60 @@ const RoundDetail = () => {
             team1Best: result.team1Best,
             team2Best: result.team2Best
         };
+    };
+
+    const renderAnimalStatus = () => {
+        if (!isAnimalScoring || !round.animalHolders) return null;
+
+        const isFront9 = currentHole <= 9;
+        const nine = isFront9 ? 'front9' : 'back9';
+        const nineLabel = isFront9 ? 'Front 9' : 'Back 9';
+        const holders = round.animalHolders[nine];
+
+        const animals: AnimalType[] = ['tree', 'water', 'bunker', 'three_putt'];
+
+        return (
+            <div className="animal-status-section">
+                <div className="animal-status-header">
+                    <span className="status-title">🦁 Animals ({nineLabel})</span>
+                    {currentHole === 9 && (
+                        <span className="nine-complete-badge">End of Front 9</span>
+                    )}
+                    {currentHole === 18 && (
+                        <span className="nine-complete-badge">End of Back 9</span>
+                    )}
+                </div>
+                <div className="animal-holders-grid">
+                    {animals.map(animalType => {
+                        const holder = holders[animalType];
+                        const player = holder ? round.players.find(p => p.id === holder.playerId) : null;
+                        const history = getAnimalHistory(animalType, isFront9);
+
+                        return (
+                            <div key={animalType} className={`animal-holder-card ${holder ? 'has-holder' : ''}`}>
+                                <div className="animal-icon">{getAnimalEmoji(animalType)}</div>
+                                <div className="animal-info">
+                                    <div className="animal-name">{getAnimalLabel(animalType)}</div>
+                                    {player ? (
+                                        <div className="animal-holder">
+                                            <span className="holder-name">{player.name}</span>
+                                            <span className="holder-hole">H{holder.holeNumber}</span>
+                                        </div>
+                                    ) : (
+                                        <div className="animal-holder empty">-</div>
+                                    )}
+                                </div>
+                                {history.length > 1 && (
+                                    <div className="animal-history-count" title={`${history.length} events this 9`}>
+                                        {history.length}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
     };
 
     const renderStatus = () => {
@@ -441,7 +674,7 @@ const RoundDetail = () => {
     const autoSaveScore = (playerId: number, strokes: number) => {
         if (!currentHoleData) return;
 
-        const hasPinkBall = isStablefordPink && currentPinkPlayer === playerId;
+        const hasPinkBall = (isStablefordPink || isAnimalsAndPink) && currentPinkPlayer === playerId;
         const points = calculateStablefordPoints(
             strokes,
             currentHoleData.hole_par,
@@ -495,7 +728,8 @@ const RoundDetail = () => {
         const holeScore: HoleScore = {
             holeNumber: currentHole,
             playerScores: updatedPlayerScores,
-            pinkPlayerId: isStablefordPink ? currentPinkPlayer : null
+            pinkPlayerId: (isStablefordPink || isAnimalsAndPink) ? currentPinkPlayer : null,
+            animalEvents: isAnimalScoring ? currentAnimalEvents : undefined
         };
 
         // Update round
@@ -612,10 +846,13 @@ const RoundDetail = () => {
             });
         }
 
+        const existingHoleScore = round.scores.find(s => s.holeNumber === currentHole);
+
         const holeScore: HoleScore = {
             holeNumber: currentHole,
             playerScores: updatedPlayerScores,
-            pinkPlayerId: isStablefordPink ? currentPinkPlayer : null
+            pinkPlayerId: (isStablefordPink || isAnimalsAndPink) ? currentPinkPlayer : null,
+            animalEvents: isAnimalScoring ? (existingHoleScore?.animalEvents || []) : undefined
         };
 
         // Update round
@@ -647,6 +884,31 @@ const RoundDetail = () => {
 
     const allHolesScored = round.scores.length === 18;
 
+    const renderAnimalToggles = (playerId: number) => {
+        if (!isAnimalScoring) return null;
+
+        const animals: AnimalType[] = ['tree', 'water', 'bunker', 'three_putt'];
+
+        return (
+            <div className="animal-toggles">
+                {animals.map(animalType => {
+                    const isActive = hasAnimalEvent(playerId, animalType);
+                    return (
+                        <button
+                            key={animalType}
+                            type="button"
+                            className={`animal-toggle-btn ${isActive ? 'active' : ''}`}
+                            onClick={() => handleAnimalToggle(playerId, animalType)}
+                            title={getAnimalLabel(animalType)}
+                        >
+                            <span className="animal-emoji">{getAnimalEmoji(animalType)}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        );
+    };
+
     const renderScoreInputs = () => {
         if (round.format === 'teams' && round.teams) {
             return round.teams.map(team => (
@@ -658,35 +920,39 @@ const RoundDetail = () => {
                     {round.players
                         .filter(p => team.playerIds.includes(p.id))
                         .map(player => (
-                            <div key={player.id} className="player-score-input">
+                            <div key={player.id} className={`player-score-input ${getScoringMethodClass()}`}>
                                 <div className="player-info">
                                     <span className="player-name">{player.name}</span>
                                     <span className="player-handicap">HCP {player.handicap}</span>
                                 </div>
-                                <NumberPicker
-                                    value={currentScores[player.id]}
-                                    placeholder={currentHoleData?.hole_par}
-                                    min={1}
-                                    max={15}
-                                    onChange={(val) => handleScoreChange(player.id, val)}
-                                    label={player.name}
-                                />
-                                <div className="points-display">
-                                    {(() => {
-                                        const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
-                                        const isDefault = !currentScores[player.id];
-                                        return (
-                                            <>
+                                {renderAnimalToggles(player.id)}
+                                <div className="score-row">
+                                    <NumberPicker
+                                        value={currentScores[player.id]}
+                                        placeholder={currentHoleData?.hole_par}
+                                        min={1}
+                                        max={15}
+                                        onChange={(val) => handleScoreChange(player.id, val)}
+                                        label={player.name}
+                                    />
+                                    <div className="points-display">
+                                        {(() => {
+                                            const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
+                                            const isDefault = !currentScores[player.id];
+                                            return (
+                                                <>
                                                 <span className={isDefault ? 'points-default' : ''}>
                                                     {calculatePlayerPoints(player.id, strokes, true)}
                                                 </span>
-                                                {isStablefordPink && currentPinkPlayer === player.id && (
-                                                    <span className="points-multiplier">2x</span>
-                                                )}
-                                            </>
-                                        );
-                                    })()}
+                                                    {(isStablefordPink || isAnimalsAndPink) && currentPinkPlayer === player.id && (
+                                                        <span className="points-multiplier">2x</span>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
                                 </div>
+
                             </div>
                         ))
                     }
@@ -695,28 +961,33 @@ const RoundDetail = () => {
         }
 
         return round.players.map(player => (
-            <div key={player.id} className="player-score-input">
-                <span className="player-name">{player.name}</span>
-                <span className="player-handicap">HC: {player.handicap}</span>
-                <NumberPicker
-                    value={currentScores[player.id]}
-                    placeholder={currentHoleData?.hole_par}
-                    min={1}
-                    max={15}
-                    onChange={(val) => handleScoreChange(player.id, val)}
-                    label={player.name}
-                />
-                <span className="points-display">
-                    {(() => {
-                        const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
-                        const isDefault = !currentScores[player.id];
-                        return (
-                            <span className={isDefault ? 'points-default' : ''}>
-                                {calculatePlayerPoints(player.id, strokes)} pts
-                            </span>
-                        );
-                    })()}
-                </span>
+            <div key={player.id} className={`player-score-input ${getScoringMethodClass()}`}>
+                <div className="player-info-row">
+                    <span className="player-name">{player.name}</span>
+                    <span className="player-handicap">HC: {player.handicap}</span>
+                </div>
+                {renderAnimalToggles(player.id)}
+                <div className="score-row">
+                    <NumberPicker
+                        value={currentScores[player.id]}
+                        placeholder={currentHoleData?.hole_par}
+                        min={1}
+                        max={15}
+                        onChange={(val) => handleScoreChange(player.id, val)}
+                        label={player.name}
+                    />
+                    <span className="points-display">
+                        {(() => {
+                            const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
+                            const isDefault = !currentScores[player.id];
+                            return (
+                                <span className={isDefault ? 'points-default' : ''}>
+                                    {calculatePlayerPoints(player.id, strokes)} pts
+                                </span>
+                            );
+                        })()}
+                    </span>
+                </div>
             </div>
         ));
     };
@@ -741,6 +1012,7 @@ const RoundDetail = () => {
                     </div>
                 </div>
 
+                {renderAnimalStatus()}
                 {renderStatus()}
 
                 <div className="current-hole-section">
@@ -783,7 +1055,7 @@ const RoundDetail = () => {
                         </div>
                     </div>
 
-                    {isStablefordPink && (
+                    {(isStablefordPink || isAnimalsAndPink) && (
                         <div className="pink-ball-section">
                             <label className="pink-ball-label">Pink Ball (Double Points):</label>
                             <div className="pink-ball-players">

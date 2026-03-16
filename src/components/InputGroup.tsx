@@ -3,10 +3,11 @@ import "../styles/Components/forms.scss"
 import Input from "./Input.tsx";
 
 const InputGroup = (props) => {
+    const {label_value, ...inputProps} = props;
     return (
         <div className="input-group">
-            <InputLabel label_value={props.label_value}></InputLabel>
-            <Input {...props}></Input>
+            <InputLabel label_value={label_value}></InputLabel>
+            <Input {...inputProps}></Input>
         </div>
     )
 }

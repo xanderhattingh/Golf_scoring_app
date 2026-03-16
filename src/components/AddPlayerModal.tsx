@@ -11,7 +11,7 @@ import 'react-simple-toasts/dist/theme/failure.css';
 
 const player_schema = z.object({
     name: z.string().min(2).max(255),
-    handicap: z.number().min(0).max(54),
+    handicap: z.coerce.number().min(0).max(54),
 })
 
 const AddPlayerModal = (props) => {
@@ -37,7 +37,7 @@ const AddPlayerModal = (props) => {
                 handicap: player.handicap
             })
         }
-    }, [mode, player, reset])
+    }, [mode, player?.id, reset])
 
     const onSubmitPlayer = (values) => {
         const dataService = new LocalDataService();
@@ -83,9 +83,9 @@ const AddPlayerModal = (props) => {
                         ></InputGroup>
                         <InputGroup
                             label_value="Handicap"
-                            {...player_form("handicap", {valueAsNumber: true})}
+                            {...player_form("handicap")}
                             placeholder="Handicap"
-                            type="number"
+                            type="text"
                             inputMode="numeric"
                             pattern="[0-9]*"
                         ></InputGroup>

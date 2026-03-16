@@ -116,7 +116,7 @@ const AddRoundModal = (props) => {
     }
 
     const handleHandicapChange = (playerId, newHandicap) => {
-        setPlayerHandicaps(playerHandicaps.map(p =>
+        setPlayerHandicaps(prev => prev.map(p =>
             p.id === playerId ? {...p, roundHandicap: Number(newHandicap)} : p
         ));
     }
