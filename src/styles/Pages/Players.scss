@@ -79,6 +79,14 @@ $bg-card: #153015;
     }
   }
 
+  // Loading state
+  .loading-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: $text-secondary;
+    font-size: 16px;
+  }
+
   // Players grid - Responsive
   .players-grid {
     display: grid;
@@ -170,9 +178,30 @@ $bg-card: #153015;
           font-weight: 600;
           color: #87ceeb;
           font-family: 'JetBrains Mono', monospace;
+          margin-bottom: 6px;
 
           &::before {
             content: 'HCP';
+            font-size: 10px;
+            opacity: 0.7;
+          }
+        }
+
+        .player-invite-code {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 12px;
+          background: rgba(212, 175, 55, 0.1);
+          border: 1px solid rgba(212, 175, 55, 0.2);
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #d4af37;
+          font-family: 'JetBrains Mono', monospace;
+
+          &::before {
+            content: 'INVITE';
             font-size: 10px;
             opacity: 0.7;
           }
@@ -214,6 +243,11 @@ $bg-card: #153015;
         &.edit:hover {
           background: rgba(45, 90, 39, 0.3);
           color: #7dd87d;
+        }
+
+        &.delete:hover {
+          background: rgba(220, 53, 69, 0.3);
+          color: #ff6b6b;
         }
       }
     }

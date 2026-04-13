@@ -1,9 +1,9 @@
 import "../styles/Components/add-round-modal.scss"
 import {useEffect, useState} from "react";
 import LocalDataService from "../services/LocalDataService.ts";
+import HttpService from "../services/HttpService.ts";
 import toast from "react-simple-toasts";
 import 'react-simple-toasts/dist/style.css';
-import 'react-simple-toasts/dist/theme/failure.css';
 import AddCourseModal from "./AddCourseModal.tsx";
 import AddPlayerModal from "./AddPlayerModal.tsx";
 
@@ -16,6 +16,7 @@ const AddRoundModal = (props) => {
     const [courses, setCourses] = useState([]);
     const [courseSearch, setCourseSearch] = useState('');
     const [selectedCourse, setSelectedCourse] = useState(null);
+    const [selectedCourseTeeId, setSelectedCourseTeeId] = useState<number | null>(null);
     const [showAddCourseModal, setShowAddCourseModal] = useState(false);
 
     // Step 2: Player selection
@@ -38,11 +39,25 @@ const AddRoundModal = (props) => {
 
     // Fetch data on mount
     useEffect(() => {
-        const dataService = new LocalDataService();
-        const data = dataService.getCreateRoundData();
-        setCourses(data.courses);
-        setPlayers(data.players);
-        setScoringMethods(data.scoring_methods);
+        const httpService = new HttpService();
+        Promise.all([
+            httpService.get('courses'),
+            httpService.get('players'),
+            httpService.get('scoring-methods'),
+        ])
+            .then(([coursesRes, playersRes, methodsRes]) => {
+                const courseData = coursesRes.data?.data || [];
+                const playerData = (playersRes.data?.data || []).map((p: any) => ({
+                    ...p,
+                    name: `${p.name} ${p.surname || ''}`.trim(),
+                }));
+                setCourses(courseData);
+                setPlayers(playerData);
+                setScoringMethods(methodsRes.data?.data || []);
+            })
+            .catch(() => {
+                toast('Failed to load data', {theme: 'failure', duration: 3000});
+            });
     }, []);
 
 
@@ -76,7 +91,7 @@ const AddRoundModal = (props) => {
 
     const canSelectTeams = selectedPlayers.length === 2 || selectedPlayers.length === 4;
 
-    const isStep1Valid = selectedCourse !== null;
+    const isStep1Valid = selectedCourse !== null && selectedCourseTeeId !== null;
     const isStep2Valid = selectedPlayers.length >= 1 && selectedPlayers.length <= 4;
     const isStep3Valid = playerHandicaps.every(p =>
         p.roundHandicap !== undefined &&
@@ -102,6 +117,7 @@ const AddRoundModal = (props) => {
 
     const handleCourseSelect = (course) => {
         setSelectedCourse(course);
+        setSelectedCourseTeeId(course?.tees?.length === 1 ? course.tees[0].id : null);
     }
 
     const handlePlayerToggle = (player) => {
@@ -157,24 +173,26 @@ const AddRoundModal = (props) => {
         }
     }
 
-    const updatePlayerHandicaps = () => {
-        const dataService = new LocalDataService();
+    const updatePlayerHandicaps = async () => {
+        const httpService = new HttpService();
 
         for (const player of playerHandicaps) {
             const originalPlayer = selectedPlayers.find(p => p.id === player.id);
             if (originalPlayer && originalPlayer.handicap !== player.roundHandicap) {
-                dataService.updatePlayer({
-                    player_id: player.id,
-                    name: player.name,
-                    handicap: player.roundHandicap
-                });
+                try {
+                    await httpService.put(`players/${player.id}`, {
+                        handicap: player.roundHandicap,
+                    });
+                } catch (e) {
+                    // Ignore permission errors for registered users
+                }
             }
         }
     }
 
-    const handleCreateRound = () => {
+    const handleCreateRound = async () => {
         try {
-            updatePlayerHandicaps();
+            await updatePlayerHandicaps();
 
             let teamsData: { name: string; playerIds: number[] }[] | undefined;
             if (selectedFormat === 'teams') {
@@ -201,19 +219,32 @@ const AddRoundModal = (props) => {
                 }
             }
 
-            const dataService = new LocalDataService();
-            const newRound = dataService.createRound({
+            const playerHandicapsMap: Record<number, number> = {};
+            playerHandicaps.forEach(p => {
+                playerHandicapsMap[p.id] = p.roundHandicap;
+            });
+
+            const httpService = new HttpService();
+            const response = await httpService.post('rounds', {
                 course_id: selectedCourse.id,
+                course_tee_id: selectedCourseTeeId,
                 player_ids: selectedPlayers.map(p => p.id),
+                player_handicaps: playerHandicapsMap,
                 scoring_method_id: selectedScoringMethod.id,
                 date: new Date().toISOString().split('T')[0],
                 format: selectedFormat,
-                teams: teamsData
+                teams: teamsData,
+                starting_hole: 1,
             });
 
-            onRoundCreated(newRound);
-        } catch {
-            toast('Failed to create round', {theme: 'failure', duration: 3000});
+            if (response.data?.success) {
+                onRoundCreated(response.data.data);
+            } else {
+                toast(response.data?.message || 'Failed to create round', {theme: 'failure', duration: 3000});
+            }
+        } catch (error: any) {
+            console.error("Create round error:", error);
+            toast(error.response?.data?.message || 'Failed to create round', {theme: 'failure', duration: 3000});
         }
     }
 
@@ -299,6 +330,23 @@ const AddRoundModal = (props) => {
                             >
                                 + Add New Course
                             </button>
+
+                            {selectedCourse && selectedCourse.tees && selectedCourse.tees.length > 0 && (
+                                <div className="tee-selection" style={{marginTop: '20px'}}>
+                                    <label>Select Tee</label>
+                                    <div className="selection-list">
+                                        {selectedCourse.tees.map((tee) => (
+                                            <div
+                                                key={tee.id}
+                                                className={`selection-item ${selectedCourseTeeId === tee.id ? 'selected' : ''}`}
+                                                onClick={() => setSelectedCourseTeeId(tee.id)}
+                                            >
+                                                {tee.tee_name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 

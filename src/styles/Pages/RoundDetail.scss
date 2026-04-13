@@ -37,6 +37,31 @@ $text-muted: #6b9b6b;
   .round-header {
     padding: 16px 0;
     margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    .clear-round-btn {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 10px;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 10px 14px;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+
+      &:hover {
+        background: rgba(239, 68, 68, 0.25);
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
 
     .back-button {
       background: rgba(123, 168, 114, 0.15);
@@ -117,12 +142,85 @@ $text-muted: #6b9b6b;
     );
     border: 1px solid rgba(123, 168, 114, 0.2);
     border-radius: 20px;
-    padding: 20px;
     margin-bottom: 16px;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+
+    // Collapsible toggle header
+    .status-toggle-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 20px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.2s ease;
+      position: relative;
+
+      &:active {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .status-summary {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+
+        .summary-label {
+          font-size: 11px;
+          color: $text-muted;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+          font-weight: 600;
+        }
+
+        .summary-value {
+          font-size: 18px;
+          font-weight: 700;
+          color: $text-primary;
+          font-family: 'JetBrains Mono', monospace;
+
+          &.leading {
+            color: #7dd87d;
+          }
+        }
+      }
+
+      .toggle-icon {
+        font-size: 14px;
+        color: $text-muted;
+        transition: transform 0.2s ease;
+        position: absolute;
+        right: 20px;
+      }
+    }
+
+    // Collapsible content wrapper
+    .status-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      padding: 0 20px;
+    }
+
+    // Expanded state
+    &.expanded {
+      .status-content {
+        max-height: 1000px; // Large enough to show all content
+        padding: 0 20px 20px;
+      }
+
+      .toggle-icon {
+        transform: rotate(180deg);
+      }
+    }
 
     // Match status header
     .match-status {
@@ -327,7 +425,7 @@ $text-muted: #6b9b6b;
     );
     border: 1px solid rgba(123, 168, 114, 0.2);
     border-radius: 24px;
-    padding: 24px;
+    padding: 12px;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25),
@@ -581,63 +679,93 @@ $text-muted: #6b9b6b;
             letter-spacing: 0.5px;
           }
         }
+
+        // Grid layout for team players - side by side
+        .team-players-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+
+          @media screen and (max-width: 400px) {
+            gap: 8px;
+          }
+        }
+      }
+
+      // Grid layout for individual format
+      .players-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+
+        @media screen and (max-width: 400px) {
+          gap: 8px;
+        }
       }
 
       .player-score-input {
         display: flex;
         flex-direction: column;
-        padding: 16px;
+        padding: 12px;
         background: rgba(0, 0, 0, 0.25);
         border: 1px solid rgba(123, 168, 114, 0.15);
-        border-radius: 16px;
-        margin-bottom: 10px;
+        border-radius: 14px;
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
 
-        &:last-child {
-          margin-bottom: 0;
-        }
-
-        .player-info {
+        .player-info-row {
           display: flex;
-          flex-direction: column;
-          gap: 4px;
-          margin-bottom: 10px;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
 
           .player-name {
             color: $text-primary;
-            font-size: 17px;
+            font-size: 14px;
             font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70%;
           }
 
           .player-handicap {
-            font-size: 12px;
+            font-size: 11px;
             color: $text-muted;
             font-family: 'JetBrains Mono', monospace;
           }
         }
 
         .animal-toggles {
-          order: -1;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
+          justify-content: center;
+
+          .animal-toggle-btn {
+            width: 36px;
+            height: 36px;
+
+            .animal-emoji {
+              font-size: 16px;
+            }
+          }
         }
 
         .score-row {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           justify-content: center;
         }
 
-        input {
-          width: 72px;
-          height: 56px;
+        input, .number-picker-trigger {
+          width: 56px;
+          height: 48px;
           padding: 0;
           border: 2px solid rgba(123, 168, 114, 0.2);
-          border-radius: 14px;
+          border-radius: 12px;
           background: rgba(0, 0, 0, 0.3);
           color: $text-primary;
-          font-size: 28px;
+          font-size: 22px;
           font-weight: 700;
           text-align: center;
           font-family: 'JetBrains Mono', monospace;
@@ -650,7 +778,7 @@ $text-muted: #6b9b6b;
             outline: none;
             border-color: $golf-pale-green;
             background: rgba(45, 90, 39, 0.2);
-            box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
+            box-shadow: 0 0 0 3px rgba(123, 168, 114, 0.1);
           }
 
           &::-webkit-inner-spin-button,
@@ -661,18 +789,18 @@ $text-muted: #6b9b6b;
         }
 
         .points-display {
-          min-width: 72px;
-          height: 56px;
+          min-width: 56px;
+          height: 48px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           background: linear-gradient(135deg, rgba(45, 90, 39, 0.3) 0%, rgba(30, 74, 30, 0.4) 100%);
           border: 2px solid rgba(74, 124, 67, 0.3);
-          border-radius: 14px;
+          border-radius: 12px;
           color: #7dd87d;
           font-weight: 700;
-          font-size: 16px;
+          font-size: 14px;
           font-family: 'JetBrains Mono', monospace;
           box-sizing: border-box;
 
@@ -683,7 +811,7 @@ $text-muted: #6b9b6b;
           }
 
           .points-multiplier {
-            font-size: 10px;
+            font-size: 9px;
             opacity: 0.8;
             font-weight: 500;
           }
@@ -824,6 +952,8 @@ $text-muted: #6b9b6b;
           display: flex;
           align-items: center;
           gap: 6px;
+          min-width: 0;
+          overflow: hidden;
 
           .holder-name {
             font-size: 14px;
@@ -832,6 +962,9 @@ $text-muted: #6b9b6b;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            flex: 1;
+            width: 0;
+            min-width: 0;
           }
 
           .holder-hole {
@@ -945,32 +1078,123 @@ $text-muted: #6b9b6b;
   }
 }
 
-// Update player score input layout for animals
+// Animal toggle adjustments for grid layout
 .player-score-input {
-  .player-info-row {
+  .animal-toggles {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-
-    .player-name {
-      color: $text-primary;
-      font-size: 17px;
-      font-weight: 600;
-    }
-
-    .player-handicap {
-      font-size: 12px;
-      color: $text-muted;
-      font-family: 'JetBrains Mono', monospace;
-    }
+    gap: 4px;
+    flex-wrap: wrap;
   }
+}
 
-  .score-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    justify-content: center;
+// Starting Hole Selector Modal
+.starting-hole-modal {
+  .modal {
+    max-width: 340px;
+    text-align: center;
+
+    .modal-header {
+      h2 {
+        margin: 0 0 8px 0;
+        color: $text-primary;
+        font-size: 22px;
+      }
+
+      .modal-subtitle {
+        margin: 0;
+        color: $text-muted;
+        font-size: 14px;
+      }
+    }
+
+    .modal-body {
+      padding: 24px 20px;
+
+      p {
+        margin: 0 0 12px 0;
+        color: $text-primary;
+        font-size: 15px;
+        line-height: 1.5;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+
+      .warning-text {
+        color: #ef4444;
+        font-size: 13px;
+        font-weight: 500;
+      }
+    }
+
+    .starting-hole-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+
+      .starting-hole-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 24px 16px;
+        background: linear-gradient(145deg, rgba(45, 90, 39, 0.4) 0%, rgba(30, 74, 30, 0.5) 100%);
+        border: 2px solid rgba(123, 168, 114, 0.3);
+        border-radius: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+
+        &:active {
+          transform: scale(0.98);
+        }
+
+        &:hover {
+          background: linear-gradient(145deg, rgba(45, 90, 39, 0.5) 0%, rgba(30, 74, 30, 0.6) 100%);
+          border-color: rgba(123, 168, 114, 0.5);
+        }
+
+        .hole-number {
+          font-size: 42px;
+          font-weight: 800;
+          color: $accent-gold;
+          font-family: 'JetBrains Mono', monospace;
+          line-height: 1;
+        }
+
+        .hole-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: $text-primary;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .hole-range {
+          font-size: 12px;
+          color: $text-muted;
+        }
+
+        &.front-9 {
+          border-color: rgba(74, 124, 67, 0.4);
+
+          &:hover {
+            border-color: rgba(74, 124, 67, 0.7);
+            box-shadow: 0 4px 16px rgba(74, 124, 67, 0.2);
+          }
+        }
+
+        &.back-9 {
+          border-color: rgba(123, 168, 114, 0.4);
+
+          &:hover {
+            border-color: rgba(123, 168, 114, 0.7);
+            box-shadow: 0 4px 16px rgba(123, 168, 114, 0.2);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -998,28 +1222,46 @@ $text-muted: #6b9b6b;
       }
 
       .score-inputs {
-        .player-score-input {
-          flex-direction: row;
-          align-items: center;
-          padding: 16px 20px;
+        .team-group .team-players-grid,
+        .players-grid {
+          grid-template-columns: repeat(2, 1fr);
           gap: 16px;
+        }
 
-          .player-info {
-            flex: 1;
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0;
-            padding-right: 20px;
+        .player-score-input {
+          padding: 16px;
+
+          .player-info-row {
+            .player-name {
+              font-size: 16px;
+            }
+
+            .player-handicap {
+              font-size: 12px;
+            }
           }
 
           .animal-toggles {
-            order: 0;
-            margin-bottom: 0;
+            .animal-toggle-btn {
+              width: 40px;
+              height: 40px;
+
+              .animal-emoji {
+                font-size: 18px;
+              }
+            }
           }
 
-          .score-row {
-            gap: 16px;
+          input, .number-picker-trigger {
+            width: 64px;
+            height: 52px;
+            font-size: 24px;
+          }
+
+          .points-display {
+            min-width: 64px;
+            height: 52px;
+            font-size: 16px;
           }
         }
       }
@@ -1056,23 +1298,23 @@ $text-muted: #6b9b6b;
 
 
   &.scoring-animals-pink, &.scoring-stableford-pink, &.scoring-animals {
-    // Add animals-pink specific styles here
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0px, 1fr));
+    // Keep flex column layout within the grid cell
+    display: flex !important;
+    flex-direction: column;
 
     .player-info-row, .player-info {
-      grid-column: 1/span 3;
-      grid-row: 1/span 1;
+      grid-column: auto;
+      grid-row: auto;
     }
 
     .animal-toggles {
-      grid-row: 2/span 1;
-      grid-column: 1/span 3;
+      grid-row: auto;
+      grid-column: auto;
     }
 
     .score-row {
-      grid-row: 3/span 1;
-      grid-column: 1/span 3;
+      grid-row: auto;
+      grid-column: auto;
     }
   }
 

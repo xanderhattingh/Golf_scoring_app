@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useMemo} from 'react'
 import {Outlet} from "react-router-dom";
 import {UserContext} from "../../../Contexts/UserContext.ts";
 import StorageService from "../../../services/StorageService.ts";
@@ -9,8 +9,7 @@ import "../../../styles/Shared/backgrounds.scss"
 
 const Dashboard = () => {
     const storage = new StorageService();
-    const ls = JSON.parse(storage.get())?.user;
-    const [user] = useState(ls);
+    const user = useMemo(() => storage.getUser(), []);
 
 
     console.log("dash loaded");

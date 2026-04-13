@@ -4,65 +4,106 @@ import {z} from "zod";
 import {useEffect} from "react";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
-import LocalDataService from "../services/LocalDataService.ts";
+import HttpService from "../services/HttpService.ts";
 import toast from "react-simple-toasts";
 import 'react-simple-toasts/dist/style.css';
-import 'react-simple-toasts/dist/theme/failure.css';
+
+interface Player {
+    id: number;
+    name: string;
+    surname: string;
+    phone: string | null;
+    handicap: number;
+}
 
 const player_schema = z.object({
     name: z.string().min(2).max(255),
-    handicap: z.coerce.number().min(0).max(54),
+    surname: z.string().min(2).max(255),
+    phone: z.string().optional().or(z.literal("")),
+    handicap: z.coerce.number().min(0).max(54).optional().default(0),
 })
 
-const AddPlayerModal = (props) => {
+type PlayerFormData = z.infer<typeof player_schema>;
+
+interface AddPlayerModalProps {
+    mode?: 'add' | 'edit';
+    player?: Player | null;
+    onPlayerAdded?: (player: Player) => void;
+    onPlayerUpdated?: (player: Player) => void;
+    onCloseModal: () => void;
+}
+
+const AddPlayerModal = (props: AddPlayerModalProps) => {
     const {mode = 'add', player, onPlayerAdded, onPlayerUpdated, onCloseModal} = props
 
     const {
         register: player_form,
-        formState: {isValid},
+        formState: {isValid, errors},
         handleSubmit,
         reset
-    } = useForm({
+    } = useForm<PlayerFormData>({
         resolver: zodResolver(player_schema),
         defaultValues: mode === 'edit' && player ? {
             name: player.name,
+            surname: player.surname,
+            phone: player.phone || '',
             handicap: player.handicap
-        } : undefined
+        } : {
+            name: '',
+            surname: '',
+            phone: '',
+            handicap: 0
+        }
     })
 
     useEffect(() => {
         if (mode === 'edit' && player) {
             reset({
                 name: player.name,
+                surname: player.surname,
+                phone: player.phone || '',
                 handicap: player.handicap
             })
         }
     }, [mode, player?.id, reset])
 
-    const onSubmitPlayer = (values) => {
-        const dataService = new LocalDataService();
-
+    const onSubmitPlayer = async (values: PlayerFormData) => {
         try {
-            if (mode === 'edit') {
-                const updatedPlayer = dataService.updatePlayer({
-                    player_id: player.id,
+            const httpService = new HttpService();
+            
+            if (mode === 'edit' && player) {
+                const response = await httpService.put(`players/${player.id}`, {
                     name: values.name,
+                    surname: values.surname,
+                    phone: values.phone || null,
                     handicap: values.handicap
                 });
-                onPlayerUpdated(updatedPlayer);
+                
+                if (response.data?.success) {
+                    onPlayerUpdated?.(response.data.data);
+                } else {
+                    toast(response.data?.message || 'Update failed', {theme: 'failure', duration: 3000});
+                }
             } else {
-                const newPlayer = dataService.addPlayer({
+                const response = await httpService.post("players", {
                     name: values.name,
+                    surname: values.surname,
+                    phone: values.phone || null,
                     handicap: values.handicap
                 });
-                onPlayerAdded(newPlayer);
+                
+                if (response.data?.success) {
+                    onPlayerAdded?.(response.data.data);
+                } else {
+                    toast(response.data?.message || 'Creation failed', {theme: 'failure', duration: 3000});
+                }
             }
         } catch (error: any) {
-            if (error.status === 422) {
-                toast('Player already exists', {theme: 'failure', duration: 3000});
-            } else {
-                toast('Something has gone wrong', {theme: 'failure', duration: 3000});
-            }
+            console.error("Player save error:", error);
+            const message = error.response?.data?.message 
+                || error.response?.data?.errors?.phone?.[0]
+                || 'Something has gone wrong';
+            toast(message, {theme: 'failure', duration: 3000});
         }
     }
 
@@ -71,34 +112,51 @@ const AddPlayerModal = (props) => {
             <div className="modal-container">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <div className="header">{mode === 'edit' ? 'Edit Player' : 'Player Details'}</div>
+                        <div className="header">{mode === 'edit' ? 'Edit Player' : 'Add New Player'}</div>
                         <button type="button" className="close-button" onClick={onCloseModal}>&times;</button>
                     </div>
                     <form className="add-course-form" onSubmit={handleSubmit(onSubmitPlayer)}>
                         <InputGroup
-                            label_value="Player Name"
+                            label_value="First Name"
                             {...player_form("name")}
-                            placeholder="Player name"
+                            placeholder="Enter first name"
                             type="text"
-                        ></InputGroup>
+                        />
+                        {errors.name && <span className="error-text">{errors.name.message}</span>}
+                        
+                        <InputGroup
+                            label_value="Surname"
+                            {...player_form("surname")}
+                            placeholder="Enter surname"
+                            type="text"
+                        />
+                        {errors.surname && <span className="error-text">{errors.surname.message}</span>}
+                        
+                        <InputGroup
+                            label_value="Phone (optional - player can add later)"
+                            {...player_form("phone")}
+                            placeholder="Enter phone number (optional)"
+                            type="tel"
+                        />
+                        
                         <InputGroup
                             label_value="Handicap"
                             {...player_form("handicap")}
                             placeholder="Handicap"
-                            type="text"
+                            type="number"
                             inputMode="numeric"
-                            pattern="[0-9]*"
-                        ></InputGroup>
+                            min="0"
+                            max="54"
+                        />
+                        {errors.handicap && <span className="error-text">Handicap must be 0-54</span>}
+                        
                         <button type={'submit'} className="button-primary" disabled={!isValid}>
                             {mode === 'edit' ? 'Update Player' : 'Create Player'}
                         </button>
                     </form>
                 </div>
             </div>
-
         </>
     )
-
-
 }
 export default AddPlayerModal

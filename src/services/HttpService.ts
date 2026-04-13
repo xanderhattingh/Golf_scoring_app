@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
+import StorageService from './StorageService';
 
 export default class HttpService {
     public baseUrl = "";
@@ -6,79 +7,106 @@ export default class HttpService {
 
     constructor() {
         this.baseUrl = import.meta.env.VITE_API_BASE_URL;
-        console.log(this.baseUrl);
-        this.instance = axios.create({baseURL: this.baseUrl});
+        this.instance = axios.create({
+            baseURL: this.baseUrl,
+            timeout: 30000,
+        });
+
+        // Add response interceptor to handle 401 errors
+        this.instance.interceptors.response.use(
+            (response: AxiosResponse) => response,
+            (error: AxiosError) => {
+                if (error.response?.status === 401) {
+                    // Clear stored user data
+                    const storage = new StorageService();
+                    storage.clear();
+                    // Redirect to login
+                    window.location.href = '/login';
+                }
+                return Promise.reject(error);
+            }
+        );
     }
 
     get defaultHeaders() {
-        const ls = JSON.parse(localStorage.getItem("Golf_Scoring_User"));
-        const headers = {
-            'Authorization': "Bearer " + ls?.authorisation?.token,
+        const storage = new StorageService();
+        const token = storage.getToken();
+        
+        const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            'Allow-Credentials': 'true',
+        };
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
+        
         return headers;
     }
 
-    async request(method, url, data = null, customHeaders = {}) {
+    async request(method: string, url: string, data = null, customHeaders = {}) {
         const headers = {...this.defaultHeaders, ...customHeaders};
-        const source = axios.CancelToken.source();
-
+        
         const config = {
             method,
             url,
             headers,
             data,
-            cancelToken: source.token
         };
 
         if (data) {
             config.data = data;
         }
 
-        return {
-            request: this.instance(config),
-            cancel: source.cancel
-        };
+        try {
+            const response = await this.instance(config);
+            return response;
+        } catch (error) {
+            console.error("HttpService error:", error);
+            throw error;
+        }
     }
 
-    get(url, customHeaders = {}) {
+    get(url: string, customHeaders = {}) {
         return this.request('get', url, null, customHeaders);
     }
 
-    post(url, data, customHeaders = {}) {
+    post(url: string, data: any, customHeaders = {}) {
         return this.request('post', url, data, customHeaders);
     }
 
-    put(url, data, customHeaders = {}) {
+    put(url: string, data: any, customHeaders = {}) {
         return this.request('put', url, data, customHeaders);
     }
 
-    delete(url, customHeaders = {}) {
+    delete(url: string, customHeaders = {}) {
         return this.request('delete', url, null, customHeaders);
     }
 
-    postFormData(url, formData: FormData) {
-        const ls = JSON.parse(localStorage.getItem("Golf_Scoring_User"));
-        const headers = {
-            'Authorization': "Bearer " + ls?.authorisation?.token,
+    async postFormData(url: string, formData: FormData) {
+        const storage = new StorageService();
+        const token = storage.getToken();
+        
+        const headers: Record<string, string> = {
             'Content-Type': 'multipart/form-data',
-            'Allow-Credentials': 'true',
         };
-        const source = axios.CancelToken.source();
-
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const config = {
             method: 'post',
             url,
             headers,
             data: formData,
-            cancelToken: source.token
         };
 
-        return {
-            request: this.instance(config),
-            cancel: source.cancel
-        };
+        try {
+            const response = await this.instance(config);
+            return response;
+        } catch (error) {
+            console.error("HttpService error:", error);
+            throw error;
+        }
     }
 }
-

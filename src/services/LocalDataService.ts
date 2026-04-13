@@ -60,6 +60,7 @@ export interface HoleScore {
     holeNumber: number;
     playerScores: PlayerScore[];
     pinkPlayerId?: number | null; // Player with pink ball for this hole (Stableford with Pink)
+    pinkAssignedAt?: string; // ISO timestamp when pink was assigned (for rotation tracking)
     animalEvents?: AnimalEvent[]; // Animal events for this hole
 }
 

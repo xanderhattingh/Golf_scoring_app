@@ -199,6 +199,100 @@ $text-secondary: #a8c9a8;
           background: rgba(31, 61, 31, 0.8);
           box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
         }
+
+        // Remove autofill background
+        &:-webkit-autofill,
+        &:-webkit-autofill:hover,
+        &:-webkit-autofill:focus,
+        &:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 1000px rgba(31, 61, 31, 0.8) inset !important;
+          -webkit-text-fill-color: $text-primary !important;
+          caret-color: $text-primary;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+      }
+
+      .error-message {
+        color: #ff6b6b;
+        font-size: 13px;
+        font-weight: 500;
+        margin-top: 4px;
+      }
+    }
+
+    // Toggle switch
+    .toggle-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 8px 0;
+
+      .toggle-label {
+        color: $text-secondary;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .toggle-switch {
+        position: relative;
+        width: 50px;
+        height: 26px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 13px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        border: 1px solid rgba(123, 168, 114, 0.2);
+
+        &.active {
+          background: $golf-light-green;
+
+          .toggle-knob {
+            transform: translateX(24px);
+          }
+        }
+
+        .toggle-knob {
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 20px;
+          height: 20px;
+          background: white;
+          border-radius: 50%;
+          transition: transform 0.3s ease;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+      }
+    }
+
+    .password-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      input {
+        padding-right: 50px;
+      }
+
+      .toggle-password {
+        position: absolute;
+        right: 12px;
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 4px;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+
+        &:hover {
+          opacity: 1;
+        }
+
+        &:focus {
+          outline: none;
+        }
       }
     }
 
@@ -266,24 +360,76 @@ $text-secondary: #a8c9a8;
   }
 }
 
-// Responsive adjustments
-@media (max-height: 700px) {
+// Responsive adjustments for small height screens
+@media (max-height: 900px) {
   .login-container {
-    justify-content: center;
-    padding: 24px;
+    justify-content: flex-start;
+    padding: 16px 24px;
+    overflow-y: auto;
+    
+    .login-content {
+      padding-top: 8px;
+    }
     
     .login-header {
-      font-size: 36px;
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+    
+    .login-subtitle {
+      font-size: 13px;
+      margin-bottom: 12px;
     }
     
     .login-image {
-      width: 80px;
-      height: 80px;
-      margin-bottom: 24px;
+      width: 50px;
+      height: 50px;
+      margin-bottom: 12px;
       
       &::after {
-        font-size: 32px;
+        font-size: 24px;
       }
+      
+      .ball-ring {
+        display: none;
+      }
+    }
+    
+    .login-form {
+      gap: 8px;
+      
+      .input-group {
+        gap: 2px;
+        
+        label {
+          font-size: 11px;
+        }
+        
+        input {
+          height: 40px;
+          padding: 0 16px;
+          font-size: 14px;
+        }
+        
+        .error-message {
+          font-size: 11px;
+        }
+      }
+      
+      .login-button {
+        height: 44px;
+        font-size: 14px;
+        margin-top: 4px;
+      }
+    }
+    
+    .no-account {
+      margin-top: 12px;
+      font-size: 12px;
+    }
+    
+    .login-footer {
+      display: none;
     }
   }
 }

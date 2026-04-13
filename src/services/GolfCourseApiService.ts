@@ -63,23 +63,24 @@ class GolfCourseApiService {
     }
 
     /**
-     * Find the best white tee from male tees.
-     * Prefers "White Re-Rate X" with the highest number, falls back to plain "White".
+     * Find the best tee of a specific color from male tees.
+     * Prefers "Color Re-Rate X" with the highest number, falls back to plain "Color".
      */
-    findBestWhiteTee(course: ApiCourse): ApiTee | null {
+    findBestTeeByColor(course: ApiCourse, color: string): ApiTee | null {
         const maleTees = course.tees?.male || [];
+        const colorLower = color.toLowerCase();
         
-        // Find all white tees (case-insensitive, starts with "white")
-        const whiteTees = maleTees.filter(tee => 
-            tee.tee_name.toLowerCase().startsWith('white')
+        // Find all tees of this color (case-insensitive, starts with color name)
+        const colorTees = maleTees.filter(tee => 
+            tee.tee_name.toLowerCase().startsWith(colorLower)
         );
 
-        if (whiteTees.length === 0) {
+        if (colorTees.length === 0) {
             return null;
         }
 
-        // Sort by Re-Rate number (highest first), then plain "White" last
-        const sorted = whiteTees.sort((a, b) => {
+        // Sort by Re-Rate number (highest first), then plain color last
+        const sorted = colorTees.sort((a, b) => {
             const aMatch = a.tee_name.match(/re-rate\s*(\d+)/i);
             const bMatch = b.tee_name.match(/re-rate\s*(\d+)/i);
             
@@ -90,6 +91,33 @@ class GolfCourseApiService {
         });
 
         return sorted[0];
+    }
+
+    /**
+     * Find the best white tee from male tees.
+     * Prefers "White Re-Rate X" with the highest number, falls back to plain "White".
+     * @deprecated Use findBestTeeByColor instead
+     */
+    findBestWhiteTee(course: ApiCourse): ApiTee | null {
+        return this.findBestTeeByColor(course, 'white');
+    }
+
+    /**
+     * Get all available color tees for a course.
+     * Returns a map of color -> tee data for colors that exist.
+     */
+    getAllColorTees(course: ApiCourse): Record<string, ApiTee> {
+        const colors = ['yellow', 'white', 'red', 'blue'];
+        const result: Record<string, ApiTee> = {};
+        
+        for (const color of colors) {
+            const tee = this.findBestTeeByColor(course, color);
+            if (tee) {
+                result[color] = tee;
+            }
+        }
+        
+        return result;
     }
 }
 

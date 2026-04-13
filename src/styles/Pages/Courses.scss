@@ -223,6 +223,82 @@ $bg-card: #153015;
       font-size: 14px;
     }
   }
+
+  // Action bar with search
+  .action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+
+    .button-primary,
+    .button-secondary {
+      white-space: nowrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      max-width: 400px;
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .search-icon {
+        position: absolute;
+        left: 14px;
+        font-size: 16px;
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .search-input-field {
+        width: 100%;
+        padding: 12px 36px 12px 40px;
+        border-radius: 12px;
+        border: 1px solid rgba(123, 168, 114, 0.2);
+        background: rgba(0, 0, 0, 0.2);
+        color: $text-primary;
+        font-size: 15px;
+        transition: all 0.2s ease;
+
+        &::placeholder {
+          color: $text-muted;
+        }
+
+        &:focus {
+          outline: none;
+          border-color: $golf-pale-green;
+          background: rgba(0, 0, 0, 0.3);
+          box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
+        }
+      }
+
+      .clear-search {
+        position: absolute;
+        right: 10px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.1);
+        color: $text-secondary;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(220, 53, 69, 0.3);
+          color: #ff6b7a;
+        }
+      }
+    }
+  }
 }
 
 // Desktop adjustments

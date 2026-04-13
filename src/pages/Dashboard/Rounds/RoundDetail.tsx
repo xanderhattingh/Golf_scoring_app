@@ -1,7 +1,8 @@
-import {useEffect, useState, useMemo} from 'react';
+import {useEffect, useState, useMemo, useCallback} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
 import LocalDataService from '../../../services/LocalDataService';
 import type {Round, HoleScore, PlayerScore, AnimalType, AnimalEvent} from '../../../services/LocalDataService';
+import HttpService from '../../../services/HttpService';
 import NumberPicker from '../../../components/NumberPicker';
 import '../../../styles/Pages/RoundDetail.scss';
 import '../../../styles/Shared/backgrounds.scss';
@@ -54,51 +55,227 @@ const RoundDetail = () => {
     const [currentScores, setCurrentScores] = useState<Record<number, number>>({});
     const [currentPinkPlayer, setCurrentPinkPlayer] = useState<number | null>(null);
     const [currentAnimalEvents, setCurrentAnimalEvents] = useState<AnimalEvent[]>([]);
+    const [isStatusExpanded, setIsStatusExpanded] = useState(false);
+    const [showStartingHoleSelector, setShowStartingHoleSelector] = useState(false);
+    const [showClearRoundModal, setShowClearRoundModal] = useState(false);
 
     const dataService = useMemo(() => new LocalDataService(), []);
+    const httpService = useMemo(() => new HttpService(), []);
+
+    const syncRound = useCallback(async (roundData: Round, options?: { scores?: HoleScore[]; courseHoles?: boolean }) => {
+        const payload: any = {
+            current_hole: roundData.currentHole,
+            completed: roundData.completed,
+        };
+
+        if (options?.scores) {
+            payload.scores = options.scores.map(s => ({
+                holeNumber: s.holeNumber,
+                playerScores: s.playerScores.map(ps => ({
+                    playerId: ps.playerId,
+                    strokes: ps.strokes,
+                    points: ps.points,
+                })),
+                pinkPlayerId: s.pinkPlayerId || null,
+                animalEvents: s.animalEvents?.map(ae => ({
+                    playerId: ae.playerId,
+                    animalType: ae.animalType,
+                })) || [],
+            }));
+        }
+
+        if (options?.courseHoles) {
+            payload.course_holes = roundData.course.holes.map(h => ({
+                hole_number: h.hole_number,
+                hole_par: h.hole_par,
+                hole_stroke: h.hole_stroke,
+            }));
+        }
+
+        try {
+            await httpService.put(`rounds/${roundData.id}`, payload);
+        } catch (error: any) {
+            console.error('Failed to sync round:', error);
+        }
+    }, [httpService]);
+
+    // Get the next pink player in rotation for team formats
+    // Learns the 4-hole pattern, then repeats it
+    const getNextPinkPlayerInRotation = useCallback((roundData: Round | null = round): number | null => {
+        if (!roundData?.teams || roundData.teams.length < 2) return null;
+        
+        // Build flat list of all players in team order
+        const allPlayers: number[] = [];
+        roundData.teams.forEach(team => {
+            allPlayers.push(...team.playerIds);
+        });
+        
+        if (allPlayers.length === 0) return null;
+        
+        // Find all pink assignments, sorted by time (or hole number as fallback)
+        const holesWithPink = roundData.scores
+            .filter(s => s.pinkPlayerId != null)
+            .sort((a, b) => {
+                if (a.pinkAssignedAt && b.pinkAssignedAt) {
+                    return new Date(a.pinkAssignedAt).getTime() - new Date(b.pinkAssignedAt).getTime();
+                }
+                return a.holeNumber - b.holeNumber;
+            });
+        
+        if (holesWithPink.length === 0) {
+            return null; // First hole, user must choose
+        }
+        
+        // If we have 4+ holes with pink, we've learned the pattern - just cycle through it
+        if (holesWithPink.length >= 4) {
+            const learnedOrder = holesWithPink.slice(0, 4).map(h => h.pinkPlayerId!);
+            const lastPlayerIndex = learnedOrder.indexOf(holesWithPink[holesWithPink.length - 1].pinkPlayerId!);
+            const nextIndex = (lastPlayerIndex + 1) % 4;
+            return learnedOrder[nextIndex];
+        }
+        
+        // Less than 4 holes - we're still learning the pattern
+        // Get the most recent pink player
+        const lastPinkPlayerId = holesWithPink[holesWithPink.length - 1].pinkPlayerId!;
+        
+        // Find which team the last player was on
+        let lastTeamIndex = -1;
+        roundData.teams.forEach((team, teamIdx) => {
+            if (team.playerIds.includes(lastPinkPlayerId)) {
+                lastTeamIndex = teamIdx;
+            }
+        });
+        
+        if (lastTeamIndex === -1) {
+            return allPlayers[0];
+        }
+        
+        const currentTeam = roundData.teams[lastTeamIndex];
+        const teammatesOnTeam = currentTeam.playerIds;
+        
+        // Count how many from current team have had pink
+        const teamPinkCount = holesWithPink.filter(h => 
+            teammatesOnTeam.includes(h.pinkPlayerId!)
+        ).length;
+        
+        // If less than 2 from this team have had pink, we need another from this team
+        if (teamPinkCount < 2) {
+            // Return the other player on this team (the one who hasn't had pink)
+            const otherPlayer = teammatesOnTeam.find(pid => pid !== lastPinkPlayerId);
+            if (otherPlayer) {
+                return otherPlayer;
+            }
+        }
+        
+        // Team 1 is done (2 players had pink), move to next team
+        const nextTeamIndex = (lastTeamIndex + 1) % roundData.teams.length;
+        const nextTeam = roundData.teams[nextTeamIndex];
+        
+        // Count how many from next team have had pink
+        const nextTeamPinkCount = holesWithPink.filter(h => 
+            nextTeam.playerIds.includes(h.pinkPlayerId!)
+        ).length;
+        
+        if (nextTeamPinkCount === 0) {
+            // First player on next team - user chooses, but suggest first player
+            return nextTeam.playerIds[0];
+        } else if (nextTeamPinkCount === 1) {
+            // Return the other player on next team
+            const nextTeamLastPlayer = holesWithPink
+                .filter(h => nextTeam.playerIds.includes(h.pinkPlayerId!))
+                .pop()?.pinkPlayerId;
+            const otherNextTeamPlayer = nextTeam.playerIds.find(pid => pid !== nextTeamLastPlayer);
+            return otherNextTeamPlayer || nextTeam.playerIds[0];
+        }
+        
+        // Fallback - shouldn't reach here
+        return allPlayers[0];
+    }, [round]);
 
     useEffect(() => {
-        const roundData = dataService.getRound(Number(id));
+        if (!round) return;
         if (!Object.keys(currentScores).length) {
-            const hole_par = roundData.course.holes.filter((hole) => {
+            const hole_par = round.course.holes.filter((hole) => {
                 return hole.hole_number == currentHole;
             })
-            if (hole_par) {
+            if (hole_par.length) {
                 const scores: Record<number, number> = {};
-                roundData.players.forEach((player) => {
+                round.players.forEach((player) => {
                     scores[player.id] = hole_par[0].hole_par;
                 })
                 setCurrentScores(scores);
             }
         }
-    }, [currentHole, currentScores])
+    }, [currentHole, currentScores, round])
 
     useEffect(() => {
         if (id) {
-            const roundData = dataService.getRound(Number(id));
-            if (roundData) {
-                setRound(roundData);
-                setCurrentHole(roundData.currentHole);
-                // Load existing scores for current hole if any
-                const existingHoleScore = roundData.scores.find(
-                    s => s.holeNumber === roundData.currentHole
-                );
-                if (existingHoleScore) {
-                    const scores: Record<number, number> = {};
-                    existingHoleScore.playerScores.forEach(ps => {
-                        scores[ps.playerId] = ps.strokes;
-                    });
-                    setCurrentScores(scores);
-                }
-            }
+            httpService.get(`rounds/${id}`)
+                .then((response) => {
+                    const roundData = response.data?.data;
+                    if (roundData) {
+                        const scoredHoles = new Set(roundData.scores.map((s: HoleScore) => s.holeNumber));
+                        let targetHole = roundData.currentHole;
+                        if (scoredHoles.has(targetHole) && scoredHoles.size < 18) {
+                            for (let h = 1; h <= 18; h++) {
+                                if (!scoredHoles.has(h)) {
+                                    targetHole = h;
+                                    break;
+                                }
+                            }
+                        }
+                        setRound(roundData);
+                        setCurrentHole(targetHole);
+                        const existingHoleScore = roundData.scores.find(
+                            (s: HoleScore) => s.holeNumber === targetHole
+                        );
+                        if (existingHoleScore) {
+                            const scores: Record<number, number> = {};
+                            existingHoleScore.playerScores.forEach((ps: PlayerScore) => {
+                                scores[ps.playerId] = ps.strokes;
+                            });
+                            setCurrentScores(scores);
+                        }
+                        if (roundData.scores.length === 0) {
+                            setShowStartingHoleSelector(true);
+                        }
+                        if (targetHole !== roundData.currentHole) {
+                            syncRound({ ...roundData, currentHole: targetHole });
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Fallback to local data if API fails
+                    const localData = dataService.getRound(Number(id));
+                    if (localData) {
+                        setRound(localData);
+                        setCurrentHole(localData.currentHole);
+                    }
+                });
         }
-    }, [id, dataService]);
+    }, [id, dataService, httpService]);
+
+    const handleStartingHoleSelect = async (holeNumber: 1 | 10) => {
+        setCurrentHole(holeNumber);
+        setShowStartingHoleSelector(false);
+        
+        if (round) {
+            const updatedRound = {
+                ...round,
+                currentHole: holeNumber
+            };
+            setRound(updatedRound);
+            await syncRound(updatedRound);
+        }
+    };
 
     // Load scores when hole changes
     useEffect(() => {
         if (round) {
             const existingHoleScore = round.scores.find(s => s.holeNumber === currentHole);
             const hasAnimalScoring = round.scoring_method.id === 5 || round.scoring_method.id === 6;
+            const hasPinkBallScoring = round.scoring_method.id === 4 || round.scoring_method.id === 6;
+            
             if (existingHoleScore) {
                 const scores: Record<number, number> = {};
                 existingHoleScore.playerScores.forEach(ps => {
@@ -106,7 +283,7 @@ const RoundDetail = () => {
                 });
                 setCurrentScores(scores);
                 // Load pink player if exists (for Stableford with Pink or Animals and Pink)
-                if ((round.scoring_method.id === 4 || round.scoring_method.id === 6) && existingHoleScore.pinkPlayerId) {
+                if (hasPinkBallScoring && existingHoleScore.pinkPlayerId) {
                     setCurrentPinkPlayer(existingHoleScore.pinkPlayerId);
                 } else {
                     setCurrentPinkPlayer(null);
@@ -118,12 +295,20 @@ const RoundDetail = () => {
                     setCurrentAnimalEvents([]);
                 }
             } else {
+                // New hole - clear scores and animal events
                 setCurrentScores({});
-                setCurrentPinkPlayer(null);
                 setCurrentAnimalEvents([]);
+                
+                // Auto-select pink player for new holes (if pink ball scoring)
+                if (hasPinkBallScoring && round.format === 'teams' && round.teams) {
+                    const nextPinkPlayer = getNextPinkPlayerInRotation(round);
+                    setCurrentPinkPlayer(nextPinkPlayer);
+                } else {
+                    setCurrentPinkPlayer(null);
+                }
             }
         }
-    }, [currentHole, round]);
+    }, [currentHole, round, getNextPinkPlayerInRotation]);
 
     if (!round) {
         return <div className="page-with-background round-detail-page">
@@ -175,10 +360,9 @@ const RoundDetail = () => {
     };
 
     // Set pink player for current hole
-    const handlePinkPlayerChange = (playerId: number) => {
+    const handlePinkPlayerChange = async (playerId: number) => {
         setCurrentPinkPlayer(playerId);
 
-        // Recalculate points for all players on this hole when pink player changes
         if (currentHoleData) {
             const existingHoleScore = round.scores.find(s => s.holeNumber === currentHole);
             if (existingHoleScore) {
@@ -199,7 +383,8 @@ const RoundDetail = () => {
                 const newHoleScore: HoleScore = {
                     holeNumber: currentHole,
                     playerScores: recalculatedScores,
-                    pinkPlayerId: playerId
+                    pinkPlayerId: playerId,
+                    pinkAssignedAt: new Date().toISOString()
                 };
 
                 const newScores = [...round.scores.filter(s => s.holeNumber !== currentHole)];
@@ -210,8 +395,8 @@ const RoundDetail = () => {
                     scores: newScores
                 };
 
-                dataService.updateRound(updatedRound);
                 setRound(updatedRound);
+                await syncRound(updatedRound, { scores: newScores });
             }
         }
     };
@@ -265,7 +450,7 @@ const RoundDetail = () => {
     };
 
 
-    const handleAnimalToggle = (playerId: number, animalType: AnimalType) => {
+    const handleAnimalToggle = async (playerId: number, animalType: AnimalType) => {
         if (!isAnimalScoring) return;
 
         // Check if this player already has this animal on this hole
@@ -343,6 +528,7 @@ const RoundDetail = () => {
             holeNumber: currentHole,
             playerScores: existingHoleScore?.playerScores || [],
             pinkPlayerId: (isStablefordPink || isAnimalsAndPink) ? currentPinkPlayer : null,
+            pinkAssignedAt: (isStablefordPink || isAnimalsAndPink) && currentPinkPlayer ? new Date().toISOString() : undefined,
             animalEvents: updatedEvents
         };
 
@@ -355,8 +541,8 @@ const RoundDetail = () => {
             animalHolders: updatedAnimalHolders
         };
 
-        dataService.updateRound(updatedRound);
         setRound(updatedRound);
+        await syncRound(updatedRound, { scores: updatedScores });
     };
 
     const hasAnimalEvent = (playerId: number, animalType: AnimalType): boolean => {
@@ -558,6 +744,19 @@ const RoundDetail = () => {
         const teamTotals = calculateTeamTotals();
         const previousHoleResult = getPreviousHoleResult();
 
+        // Get summary text for collapsed header
+        const getStatusSummary = () => {
+            if (round.format === 'teams' && teamTotals && round.teams && teamTotals.length === 2) {
+                const diff = teamTotals[0].holesWon - teamTotals[1].holesWon;
+                if (diff > 0) return `${round.teams[0].name} ${diff}↑`;
+                if (diff < 0) return `${round.teams[1].name} ${Math.abs(diff)}↑`;
+                return 'All Square';
+            }
+            return 'Scores';
+        };
+
+        const toggleExpand = () => setIsStatusExpanded(!isStatusExpanded);
+
         if (round.format === 'teams' && teamTotals && round.teams && teamTotals.length === 2) {
             const diff = teamTotals[0].holesWon - teamTotals[1].holesWon;
             let matchStatusText = 'All Square';
@@ -572,88 +771,99 @@ const RoundDetail = () => {
             }
 
             return (
-                <div className="status-section">
-                    <div className="match-status">
-                        <div className="status-title">Match Status</div>
-                        <div className={`status-value ${matchStatusClass}`}>{matchStatusText}</div>
-                    </div>
+                <div className={`status-section ${isStatusExpanded ? 'expanded' : 'collapsed'}`}>
+                    <button className="status-toggle-header" onClick={toggleExpand}>
+                        <div className="status-summary">
+                            <span className="summary-label">Match Status</span>
+                            <span className={`summary-value ${matchStatusClass}`}>{getStatusSummary()}</span>
+                        </div>
+                        <span className="toggle-icon">{isStatusExpanded ? '▼' : '▶'}</span>
+                    </button>
+                    
+                    <div className="status-content">
+                        <div className="match-status">
+                            <div className="status-title">Match Status</div>
+                            <div className={`status-value ${matchStatusClass}`}>{matchStatusText}</div>
+                        </div>
 
-                    {previousHoleResult && (
-                        <div className="previous-hole-result">
-                            <div className="result-title">Hole {previousHoleResult.holeNumber} Result</div>
-                            <div
-                                className={`result-value ${previousHoleResult.winner === 'Halved' ? 'halved' : 'won'}`}>
-                                {previousHoleResult.winner === 'Halved'
-                                    ? `Halved (${previousHoleResult.team1Best} pts each)`
-                                    : `${previousHoleResult.winner} won (${Math.max(previousHoleResult.team1Best, previousHoleResult.team2Best)} vs ${Math.min(previousHoleResult.team1Best, previousHoleResult.team2Best)} pts)`
-                                }
+                        {previousHoleResult && (
+                            <div className="previous-hole-result">
+                                <div className="result-title">Hole {previousHoleResult.holeNumber} Result</div>
+                                <div
+                                    className={`result-value ${previousHoleResult.winner === 'Halved' ? 'halved' : 'won'}`}>
+                                    {previousHoleResult.winner === 'Halved'
+                                        ? `Halved (${previousHoleResult.team1Best} pts each)`
+                                        : `${previousHoleResult.winner} won (${Math.max(previousHoleResult.team1Best, previousHoleResult.team2Best)} vs ${Math.min(previousHoleResult.team1Best, previousHoleResult.team2Best)} pts)`
+                                    }
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="holes-summary">
+                            <div className="team-holes">
+                                <span className="team-name">{round.teams[0].name}</span>
+                                <span className="holes-won">{teamTotals[0].holesWon} won</span>
+                            </div>
+                            <div className="halved-holes">
+                                <span>{teamTotals[0].holesHalved} halved</span>
+                            </div>
+                            <div className="team-holes">
+                                <span className="team-name">{round.teams[1].name}</span>
+                                <span className="holes-won">{teamTotals[1].holesWon} won</span>
                             </div>
                         </div>
-                    )}
 
-                    <div className="holes-summary">
-                        <div className="team-holes">
-                            <span className="team-name">{round.teams[0].name}</span>
-                            <span className="holes-won">{teamTotals[0].holesWon} won</span>
+                        <div className="team-points-totals">
+                            <div className="status-title">Total Points</div>
+                            <div className="team-scores">
+                                {teamTotals.map((team, idx) => (
+                                    <div key={idx} className="score-item">
+                                        <span className="name">{team.name}</span>
+                                        <span className="value">{team.points}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <div className="halved-holes">
-                            <span>{teamTotals[0].holesHalved} halved</span>
-                        </div>
-                        <div className="team-holes">
-                            <span className="team-name">{round.teams[1].name}</span>
-                            <span className="holes-won">{teamTotals[1].holesWon} won</span>
-                        </div>
-                    </div>
 
-                    <div className="team-points-totals">
-                        <div className="status-title">Total Points</div>
-                        <div className="team-scores">
-                            {teamTotals.map((team, idx) => (
-                                <div key={idx} className="score-item">
-                                    <span className="name">{team.name}</span>
-                                    <span className="value">{team.points}</span>
+                        <div className="status-title">Strokes/Points</div>
+                        <div className="player-scores">
+                            {round.players.map(player => (
+                                <div key={player.id} className="score-item">
+                                    <span className="name">{player.name}</span>
+                                    <span className="value">
+                                        {playerTotals[player.id]?.strokes || 0}/{playerTotals[player.id]?.points || 0}
+                                    </span>
                                 </div>
                             ))}
                         </div>
                     </div>
-
-                    <div className="status-title">
-                        {round.scoring_method.id === 2 ? 'Points' : 'Strokes'}
-                    </div>
-                    <div className="player-scores">
-                        {round.players.map(player => (
-                            <div key={player.id} className="score-item">
-                                <span className="name">{player.name}</span>
-                                <span className="value">
-                                        {playerTotals[player.id]?.strokes}
-                            </span>
-                            </div>
-                        ))}
-                    </div>
-
                 </div>
-
             );
         }
 
         // Individual format
         return (
-            <div className="status-section">
-                <div className="status-title">
-                    {'Strokes/Points'}
-                </div>
-                <div className="player-scores">
-                    {round.players.map(player => (
-                        <div key={player.id} className="score-item">
-                            <span className="name">{player.name}</span>
-                            <span
-                                className="value">{playerTotals[player.id]?.strokes || 0}/{playerTotals[player.id]?.points || 0}
-                            </span>
-                            <span className="value"></span>
-                        </div>
-
-
-                    ))}
+            <div className={`status-section ${isStatusExpanded ? 'expanded' : 'collapsed'}`}>
+                <button className="status-toggle-header" onClick={toggleExpand}>
+                    <div className="status-summary">
+                        <span className="summary-label">Scores</span>
+                        <span className="summary-value">{round.players.length} Players</span>
+                    </div>
+                    <span className="toggle-icon">{isStatusExpanded ? '▼' : '▶'}</span>
+                </button>
+                
+                <div className="status-content">
+                    <div className="status-title">Strokes/Points</div>
+                    <div className="player-scores">
+                        {round.players.map(player => (
+                            <div key={player.id} className="score-item">
+                                <span className="name">{player.name}</span>
+                                <span className="value">
+                                    {playerTotals[player.id]?.strokes || 0}/{playerTotals[player.id]?.points || 0}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         );
@@ -741,12 +951,11 @@ const RoundDetail = () => {
             scores: updatedScores
         };
 
-        dataService.updateRound(updatedRound);
         setRound(updatedRound);
     };
 
     // Handle hole data changes (par and stroke index)
-    const handleHoleDataChange = (field: 'hole_par' | 'hole_stroke', value: number) => {
+    const handleHoleDataChange = async (field: 'hole_par' | 'hole_stroke', value: number) => {
         if (!currentHoleData) return;
 
         const updatedHoles = round.course.holes.map(h =>
@@ -763,10 +972,8 @@ const RoundDetail = () => {
             }
         };
 
-        dataService.updateRound(updatedRound);
         setRound(updatedRound);
 
-        // Recalculate points for this hole if scores exist
         const holeScore = round.scores.find(s => s.holeNumber === currentHole);
         if (holeScore) {
             const recalculatedScores = holeScore.playerScores.map(ps => ({
@@ -776,14 +983,14 @@ const RoundDetail = () => {
                     field === 'hole_par' ? value : currentHoleData.hole_par,
                     field === 'hole_stroke' ? value : currentHoleData.hole_stroke,
                     getPlayerHandicap(ps.playerId),
-                    isStablefordPink && currentPinkPlayer === ps.playerId
+                    (isStablefordPink || isAnimalsAndPink) && currentPinkPlayer === ps.playerId
                 )
             }));
 
             const newHoleScore: HoleScore = {
                 holeNumber: currentHole,
                 playerScores: recalculatedScores,
-                pinkPlayerId: isStablefordPink ? currentPinkPlayer : null
+                pinkPlayerId: (isStablefordPink || isAnimalsAndPink) ? currentPinkPlayer : null
             };
 
             const newScores = [...round.scores.filter(s => s.holeNumber !== currentHole)];
@@ -794,31 +1001,56 @@ const RoundDetail = () => {
                 scores: newScores
             };
 
-            dataService.updateRound(finalRound);
             setRound(finalRound);
+            await syncRound(finalRound, { scores: newScores, courseHoles: true });
+        } else {
+            await syncRound(updatedRound, { courseHoles: true });
         }
     };
 
-    const handleFinishRound = () => {
+    const handleFinishRound = async () => {
         const updatedRound = {...round, completed: true};
-        dataService.updateRound(updatedRound);
+        setRound(updatedRound);
+        await syncRound(updatedRound, { scores: updatedRound.scores });
         navigate('/dashboard/rounds');
+    };
+
+    // Clear all round data (scores)
+    const handleClearRound = async () => {
+        const updatedRound: Round = {
+            ...round,
+            scores: [],
+            animalHolders: {
+                front9: {tree: null, water: null, bunker: null, three_putt: null},
+                back9: {tree: null, water: null, bunker: null, three_putt: null}
+            },
+            currentHole: 1,
+            completed: false
+        };
+        
+        setRound(updatedRound);
+        setCurrentHole(1);
+        setCurrentScores({});
+        setCurrentPinkPlayer(null);
+        setCurrentAnimalEvents([]);
+        setShowClearRoundModal(false);
+        setShowStartingHoleSelector(true);
+
+        await syncRound(updatedRound, { scores: [] });
     };
 
     // Navigate to next hole
     // Save all current hole scores to the round
-    const saveCurrentHoleScores = () => {
+    const saveCurrentHoleScores = async () => {
         if (!currentHoleData) return;
 
         let updatedPlayerScores: PlayerScore[] = [];
 
-        // Save ALL players - use their entered score or default to par
         round.players.forEach(player => {
-            // Use entered score if available, otherwise use par as default
             const strokes = currentScores[player.id] || currentHoleData.hole_par;
             if (strokes <= 0) return;
 
-            const hasPinkBall = isStablefordPink && currentPinkPlayer === player.id;
+            const hasPinkBall = (isStablefordPink || isAnimalsAndPink) && currentPinkPlayer === player.id;
             const points = calculateStablefordPoints(
                 strokes,
                 currentHoleData.hole_par,
@@ -835,7 +1067,6 @@ const RoundDetail = () => {
             });
         });
 
-        // Assign team IDs if in team mode
         if (round.teams) {
             updatedPlayerScores.forEach((playerScore) => {
                 round.teams!.forEach((team) => {
@@ -852,10 +1083,10 @@ const RoundDetail = () => {
             holeNumber: currentHole,
             playerScores: updatedPlayerScores,
             pinkPlayerId: (isStablefordPink || isAnimalsAndPink) ? currentPinkPlayer : null,
-            animalEvents: isAnimalScoring ? (existingHoleScore?.animalEvents || []) : undefined
+            pinkAssignedAt: (isStablefordPink || isAnimalsAndPink) && currentPinkPlayer ? new Date().toISOString() : undefined,
+            animalEvents: isAnimalScoring ? currentAnimalEvents : (existingHoleScore?.animalEvents || [])
         };
 
-        // Update round
         const updatedScores = [...round.scores.filter(s => s.holeNumber !== currentHole)];
         updatedScores.push(holeScore);
 
@@ -864,22 +1095,32 @@ const RoundDetail = () => {
             scores: updatedScores
         };
 
-        dataService.updateRound(updatedRound);
         setRound(updatedRound);
+        await syncRound(updatedRound, { scores: updatedScores });
     };
 
-    const handleNextHole = () => {
-        // Save all current scores before navigating
-        saveCurrentHoleScores();
+    const handleNextHole = async () => {
+        await saveCurrentHoleScores();
 
         const nextHole = currentHole === 18 ? 1 : currentHole + 1;
         setCurrentHole(nextHole);
+        setRound(prev => {
+            if (!prev) return prev;
+            const updatedRound = {...prev, currentHole: nextHole};
+            syncRound(updatedRound);
+            return updatedRound;
+        });
     };
 
-    const handleNavigateHole = (newHole: number) => {
-        // Save all current scores before navigating
-        saveCurrentHoleScores();
+    const handleNavigateHole = async (newHole: number) => {
+        await saveCurrentHoleScores();
         setCurrentHole(newHole);
+        setRound(prev => {
+            if (!prev) return prev;
+            const updatedRound = {...prev, currentHole: newHole};
+            syncRound(updatedRound);
+            return updatedRound;
+        });
     };
 
     const allHolesScored = round.scores.length === 18;
@@ -909,6 +1150,42 @@ const RoundDetail = () => {
         );
     };
 
+    const renderPlayerScoreInput = (player: typeof round.players[0]) => (
+        <div key={player.id} className={`player-score-input ${getScoringMethodClass()}`}>
+            <div className="player-info-row">
+                <span className="player-name">{player.name}</span>
+                <span className="player-handicap">HC: {player.handicap}</span>
+            </div>
+            {renderAnimalToggles(player.id)}
+            <div className="score-row">
+                <NumberPicker
+                    value={currentScores[player.id]}
+                    placeholder={currentHoleData?.hole_par}
+                    min={1}
+                    max={15}
+                    onChange={(val) => handleScoreChange(player.id, val)}
+                    label={player.name}
+                />
+                <div className="points-display">
+                    {(() => {
+                        const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
+                        const isDefault = !currentScores[player.id];
+                        return (
+                            <>
+                                <span className={isDefault ? 'points-default' : ''}>
+                                    {calculatePlayerPoints(player.id, strokes, true)}
+                                </span>
+                                {(isStablefordPink || isAnimalsAndPink) && currentPinkPlayer === player.id && (
+                                    <span className="points-multiplier">2x</span>
+                                )}
+                            </>
+                        );
+                    })()}
+                </div>
+            </div>
+        </div>
+    );
+
     const renderScoreInputs = () => {
         if (round.format === 'teams' && round.teams) {
             return round.teams.map(team => (
@@ -917,79 +1194,22 @@ const RoundDetail = () => {
                         <span className="team-flag">{team.id === 1 ? '🔴' : '🔵'}</span>
                         <h4>{team.name}</h4>
                     </div>
-                    {round.players
-                        .filter(p => team.playerIds.includes(p.id))
-                        .map(player => (
-                            <div key={player.id} className={`player-score-input ${getScoringMethodClass()}`}>
-                                <div className="player-info">
-                                    <span className="player-name">{player.name}</span>
-                                    <span className="player-handicap">HCP {player.handicap}</span>
-                                </div>
-                                {renderAnimalToggles(player.id)}
-                                <div className="score-row">
-                                    <NumberPicker
-                                        value={currentScores[player.id]}
-                                        placeholder={currentHoleData?.hole_par}
-                                        min={1}
-                                        max={15}
-                                        onChange={(val) => handleScoreChange(player.id, val)}
-                                        label={player.name}
-                                    />
-                                    <div className="points-display">
-                                        {(() => {
-                                            const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
-                                            const isDefault = !currentScores[player.id];
-                                            return (
-                                                <>
-                                                <span className={isDefault ? 'points-default' : ''}>
-                                                    {calculatePlayerPoints(player.id, strokes, true)}
-                                                </span>
-                                                    {(isStablefordPink || isAnimalsAndPink) && currentPinkPlayer === player.id && (
-                                                        <span className="points-multiplier">2x</span>
-                                                    )}
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                </div>
-
-                            </div>
-                        ))
-                    }
+                    <div className="team-players-grid">
+                        {round.players
+                            .filter(p => team.playerIds.includes(p.id))
+                            .map(player => renderPlayerScoreInput(player))
+                        }
+                    </div>
                 </div>
             ));
         }
 
-        return round.players.map(player => (
-            <div key={player.id} className={`player-score-input ${getScoringMethodClass()}`}>
-                <div className="player-info-row">
-                    <span className="player-name">{player.name}</span>
-                    <span className="player-handicap">HC: {player.handicap}</span>
-                </div>
-                {renderAnimalToggles(player.id)}
-                <div className="score-row">
-                    <NumberPicker
-                        value={currentScores[player.id]}
-                        placeholder={currentHoleData?.hole_par}
-                        min={1}
-                        max={15}
-                        onChange={(val) => handleScoreChange(player.id, val)}
-                        label={player.name}
-                    />
-                    <span className="points-display">
-                        {(() => {
-                            const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
-                            const isDefault = !currentScores[player.id];
-                            return (
-                                <span className={isDefault ? 'points-default' : ''}>
-                                    {calculatePlayerPoints(player.id, strokes)} pts
-                                </span>
-                            );
-                        })()}
-                    </span>
-                </div>
+        // Individual format - also use grid layout
+        return (
+            <div className="players-grid">
+                {round.players.map(player => renderPlayerScoreInput(player))}
             </div>
-        ));
+        );
     };
 
     return (
@@ -999,6 +1219,61 @@ const RoundDetail = () => {
                 style={{backgroundImage: `url(${golfBg})`}}
             />
             <div className="page-content round-detail-container">
+                {/* Starting Hole Selector Modal */}
+                {showStartingHoleSelector && (
+                    <div className="modal-overlay starting-hole-modal">
+                        <div className="modal">
+                            <div className="modal-header">
+                                <h2>🏌️ Select Starting Hole</h2>
+                                <p className="modal-subtitle">Where are you teeing off?</p>
+                            </div>
+                            <div className="modal-body">
+                                <div className="starting-hole-options">
+                                    <button 
+                                        className="starting-hole-btn front-9"
+                                        onClick={() => handleStartingHoleSelect(1)}
+                                    >
+                                        <span className="hole-number">1</span>
+                                        <span className="hole-label">Front 9</span>
+                                        <span className="hole-range">Holes 1-9</span>
+                                    </button>
+                                    <button 
+                                        className="starting-hole-btn back-9"
+                                        onClick={() => handleStartingHoleSelect(10)}
+                                    >
+                                        <span className="hole-number">10</span>
+                                        <span className="hole-label">Back 9</span>
+                                        <span className="hole-range">Holes 10-18</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Clear Round Confirmation Modal */}
+                {showClearRoundModal && (
+                    <div className="modal-overlay">
+                        <div className="modal confirm-modal">
+                            <div className="modal-header">
+                                <h2>🗑️ Clear Round Data</h2>
+                            </div>
+                            <div className="modal-body">
+                                <p>Are you sure you want to clear all scores for this round?</p>
+                                <p className="warning-text">This will delete all hole scores and cannot be undone.</p>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="button-secondary" onClick={() => setShowClearRoundModal(false)}>
+                                    Cancel
+                                </button>
+                                <button className="button-danger" onClick={handleClearRound}>
+                                    Clear All Scores
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="round-header">
                     <button className="back-button" onClick={() => navigate('/dashboard/rounds')}>
                         &larr; Back to Rounds
@@ -1010,6 +1285,15 @@ const RoundDetail = () => {
                             {round.format === 'teams' && <span className="format-badge">Team Format</span>}
                         </div>
                     </div>
+                    {round.scores.length > 0 && (
+                        <button 
+                            className="clear-round-btn"
+                            onClick={() => setShowClearRoundModal(true)}
+                            title="Clear all scores"
+                        >
+                            🗑️
+                        </button>
+                    )}
                 </div>
 
                 {renderAnimalStatus()}

@@ -2,8 +2,12 @@ import {useEffect, useState} from 'react'
 import {useNavigate} from 'react-router-dom';
 import {jsPDF} from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import {Filesystem, Directory} from '@capacitor/filesystem';
+import {Share} from '@capacitor/share';
+import {Capacitor} from '@capacitor/core';
 import LocalDataService from "../../../services/LocalDataService.ts";
 import type {Round} from "../../../services/LocalDataService.ts";
+import HttpService from "../../../services/HttpService.ts";
 
 import "../../../styles/Pages/Rounds.scss"
 import "../../../styles/Shared/backgrounds.scss"
@@ -17,8 +21,14 @@ const Rounds = () => {
     const [roundToDelete, setRoundToDelete] = useState<Round | null>(null);
 
     useEffect(() => {
-        const dataService = new LocalDataService();
-        setRounds(dataService.getRounds());
+        const httpService = new HttpService();
+        httpService.get('rounds')
+            .then((response) => {
+                setRounds(response.data?.data || []);
+            })
+            .catch(() => {
+                setRounds([]);
+            });
     }, []);
 
     const handleAddRoundClick = () => {
@@ -49,10 +59,15 @@ const Rounds = () => {
 
     const handleConfirmDelete = () => {
         if (roundToDelete) {
-            const dataService = new LocalDataService();
-            dataService.deleteRound(roundToDelete.id);
-            setRounds((old) => old.filter((r) => r.id !== roundToDelete.id));
-            setRoundToDelete(null);
+            const httpService = new HttpService();
+            httpService.delete(`rounds/${roundToDelete.id}`)
+                .then(() => {
+                    setRounds((old) => old.filter((r) => r.id !== roundToDelete.id));
+                    setRoundToDelete(null);
+                })
+                .catch(() => {
+                    setRoundToDelete(null);
+                });
         }
     }
 
@@ -68,7 +83,22 @@ const Rounds = () => {
         });
     }
 
-    const handleExportRound = (round: Round) => {
+    const handleExportRound = async (round: Round) => {
+        let fullRound = round;
+        if (!round.scores || round.scores.length !== (round.scores_count ?? 0)) {
+            try {
+                const httpService = new HttpService();
+                const response = await httpService.get(`rounds/${round.id}`);
+                if (response.data?.success) {
+                    fullRound = response.data.data;
+                }
+            } catch (e) {
+                console.error('Failed to fetch full round for export:', e);
+            }
+        }
+
+        fullRound.scores = fullRound.scores || [];
+
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -80,30 +110,43 @@ const Rounds = () => {
         // Round info
         doc.setFontSize(12);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Course: ${round.course.name}`, 14, 35);
-        doc.text(`Date: ${formatDate(round.date)}`, 14, 42);
-        doc.text(`Format: ${round.format === 'teams' ? 'Teams' : 'Individual'}`, 14, 49);
-        doc.text(`Scoring: ${round.scoring_method.name}`, 14, 56);
+        let currentY = 35;
+        const maxTextWidth = pageWidth - 28;
 
-        // Players
-        const playerNames = round.players.map(p => `${p.name} (HC: ${p.handicap})`).join(', ');
-        doc.text(`Players: ${playerNames}`, 14, 63);
+        doc.text(`Course: ${fullRound.course.name}`, 14, currentY);
+        currentY += 7;
+        doc.text(`Date: ${formatDate(fullRound.date)}`, 14, currentY);
+        currentY += 7;
+        doc.text(`Format: ${fullRound.format === 'teams' ? 'Teams' : 'Individual'}`, 14, currentY);
+        currentY += 7;
+        doc.text(`Scoring: ${fullRound.scoring_method.name}`, 14, currentY);
+        currentY += 7;
 
-        // Teams (if applicable)
-        if (round.format === 'teams' && round.teams) {
-            const teamInfo = round.teams.map(t => {
-                const members = t.playerIds.map(pid => round.players.find(p => p.id === pid)?.name).join(' & ');
+        // Players (wrapped)
+        const playerNames = fullRound.players.map(p => `${p.name} (HC: ${p.handicap})`).join(', ');
+        const playersText = `Players: ${playerNames}`;
+        const playersLines = doc.splitTextToSize(playersText, maxTextWidth);
+        doc.text(playersLines, 14, currentY);
+        currentY += playersLines.length * 7;
+
+        // Teams (if applicable, wrapped)
+        if (fullRound.format === 'teams' && fullRound.teams) {
+            const teamInfo = fullRound.teams.map(t => {
+                const members = t.playerIds.map(pid => fullRound.players.find(p => p.id === pid)?.name).join(' & ');
                 return `${t.name}: ${members}`;
             }).join(' | ');
-            doc.text(`Teams: ${teamInfo}`, 14, 70);
+            const teamsText = `Teams: ${teamInfo}`;
+            const teamsLines = doc.splitTextToSize(teamsText, maxTextWidth);
+            doc.text(teamsLines, 14, currentY);
+            currentY += teamsLines.length * 7;
         }
 
         // Calculate player totals
         const playerTotals: Record<number, { strokes: number; points: number }> = {};
-        round.players.forEach(p => {
+        fullRound.players.forEach(p => {
             playerTotals[p.id] = {strokes: 0, points: 0};
         });
-        round.scores.forEach(holeScore => {
+        fullRound.scores.forEach(holeScore => {
             holeScore.playerScores.forEach(ps => {
                 if (playerTotals[ps.playerId]) {
                     playerTotals[ps.playerId].strokes += ps.strokes;
@@ -113,13 +156,13 @@ const Rounds = () => {
         });
 
         // Summary table
-        const summaryStartY = round.format === 'teams' ? 80 : 73;
+        const summaryStartY = currentY + 10;
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('Summary', 14, summaryStartY);
 
         const summaryHeaders = ['Player', 'Handicap', 'Total Strokes', 'Total Points'];
-        const summaryData = round.players.map(p => [
+        const summaryData = fullRound.players.map(p => [
             p.name,
             p.handicap.toString(),
             playerTotals[p.id].strokes.toString(),
@@ -137,27 +180,27 @@ const Rounds = () => {
 
         // Helper to get hole winner for team matches
         const getHoleWinner = (holeNumber: number): { winner: string; team1Best: number; team2Best: number } => {
-            if (!round.teams || round.teams.length < 2) {
+            if (!fullRound.teams || fullRound.teams.length < 2) {
                 return {winner: '-', team1Best: 0, team2Best: 0};
             }
-            const holeScore = round.scores.find(s => s.holeNumber === holeNumber);
+            const holeScore = fullRound.scores.find(s => s.holeNumber === holeNumber);
             if (!holeScore) return {winner: '-', team1Best: 0, team2Best: 0};
 
             const team1Best = Math.max(
-                ...round.teams[0].playerIds.map(pid => {
+                ...fullRound.teams[0].playerIds.map(pid => {
                     const ps = holeScore.playerScores.find(p => p.playerId === pid);
                     return ps?.points || 0;
                 })
             );
             const team2Best = Math.max(
-                ...round.teams[1].playerIds.map(pid => {
+                ...fullRound.teams[1].playerIds.map(pid => {
                     const ps = holeScore.playerScores.find(p => p.playerId === pid);
                     return ps?.points || 0;
                 })
             );
 
-            if (team1Best > team2Best) return {winner: round.teams[0].name, team1Best, team2Best};
-            if (team2Best > team1Best) return {winner: round.teams[1].name, team1Best, team2Best};
+            if (team1Best > team2Best) return {winner: fullRound.teams[0].name, team1Best, team2Best};
+            if (team2Best > team1Best) return {winner: fullRound.teams[1].name, team1Best, team2Best};
             return {winner: 'Halved', team1Best, team2Best};
         };
 
@@ -165,7 +208,7 @@ const Rounds = () => {
         // @ts-expect-error autoTable adds lastAutoTable to doc
         let scorecardStartY = doc.lastAutoTable.finalY + 15;
 
-        if (round.format === 'teams' && round.teams && round.teams.length === 2) {
+        if (fullRound.format === 'teams' && fullRound.teams && fullRound.teams.length === 2) {
             // Calculate team results
             let team1Wins = 0;
             let team2Wins = 0;
@@ -173,17 +216,17 @@ const Rounds = () => {
 
             for (let h = 1; h <= 18; h++) {
                 const result = getHoleWinner(h);
-                if (result.winner === round.teams[0].name) team1Wins++;
-                else if (result.winner === round.teams[1].name) team2Wins++;
+                if (result.winner === fullRound.teams[0].name) team1Wins++;
+                else if (result.winner === fullRound.teams[1].name) team2Wins++;
                 else if (result.winner === 'Halved') halved++;
             }
 
             const diff = team1Wins - team2Wins;
             let matchResult = 'All Square';
             if (diff > 0) {
-                matchResult = `${round.teams[0].name} wins ${diff} up`;
+                matchResult = `${fullRound.teams[0].name} wins ${diff} up`;
             } else if (diff < 0) {
-                matchResult = `${round.teams[1].name} wins ${Math.abs(diff)} up`;
+                matchResult = `${fullRound.teams[1].name} wins ${Math.abs(diff)} up`;
             }
 
             // @ts-expect-error autoTable adds lastAutoTable to doc
@@ -196,8 +239,8 @@ const Rounds = () => {
                 startY: teamResultsY + 5,
                 head: [['Team', 'Holes Won', 'Holes Halved', 'Result']],
                 body: [
-                    [round.teams[0].name, team1Wins.toString(), halved.toString(), diff > 0 ? 'WINNER' : (diff === 0 ? 'DRAW' : '')],
-                    [round.teams[1].name, team2Wins.toString(), halved.toString(), diff < 0 ? 'WINNER' : (diff === 0 ? 'DRAW' : '')]
+                    [fullRound.teams[0].name, team1Wins.toString(), halved.toString(), diff > 0 ? 'WINNER' : (diff === 0 ? 'DRAW' : '')],
+                    [fullRound.teams[1].name, team2Wins.toString(), halved.toString(), diff < 0 ? 'WINNER' : (diff === 0 ? 'DRAW' : '')]
                 ],
                 theme: 'striped',
                 headStyles: {fillColor: [16, 185, 129]},
@@ -214,6 +257,7 @@ const Rounds = () => {
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
             // @ts-expect-error autoTable adds lastAutoTable to doc
+            // @ts-expect-error autoTable adds lastAutoTable to doc
             doc.text(`Final Result: ${matchResult}`, 14, doc.lastAutoTable.finalY + 10);
 
             // @ts-expect-error autoTable adds lastAutoTable to doc
@@ -224,7 +268,7 @@ const Rounds = () => {
         doc.text('Scorecard - Front 9', 14, scorecardStartY);
 
         // Sort scores by hole number
-        const sortedScores = [...round.scores].sort((a, b) => a.holeNumber - b.holeNumber);
+        const sortedScores = [...fullRound.scores].sort((a, b) => a.holeNumber - b.holeNumber);
 
         // Helper to build scorecard for a range of holes
         const buildScorecardData = (startHole: number, endHole: number) => {
@@ -239,7 +283,7 @@ const Rounds = () => {
             let parTotal = 0;
             const parRow = ['Par'];
             for (let h = startHole; h <= endHole; h++) {
-                const holeData = round.course.holes.find(hole => hole.hole_number === h);
+                const holeData = fullRound.course.holes.find(hole => hole.hole_number === h);
                 const par = holeData?.hole_par || 0;
                 parTotal += par;
                 parRow.push(par.toString());
@@ -249,7 +293,7 @@ const Rounds = () => {
             // SI row
             const siRow = ['SI'];
             for (let h = startHole; h <= endHole; h++) {
-                const holeData = round.course.holes.find(hole => hole.hole_number === h);
+                const holeData = fullRound.course.holes.find(hole => hole.hole_number === h);
                 siRow.push(holeData?.hole_stroke.toString() || '-');
             }
             siRow.push('-');
@@ -259,7 +303,7 @@ const Rounds = () => {
 
             // Player rows (strokes and points for each)
             const playerRows: string[][] = [];
-            round.players.forEach(p => {
+            fullRound.players.forEach(p => {
                 let strokesTotal = 0;
                 let pointsTotal = 0;
                 const strokesRow = [`${p.name}`];
@@ -279,7 +323,7 @@ const Rounds = () => {
 
                     // Check if this player had pink ball on this hole
                     // Mark both strokes cell AND points cell as pink
-                    if (holeScore?.pinkPlayerId === p.id && points > 0) {
+                    if (holeScore?.pinkPlayerId === p.id && strokes > 0) {
                         const colIndex = h - startHole + 1; // +1 for label column
                         if (!pinkCells[strokesRowIndex]) pinkCells[strokesRowIndex] = {};
                         if (!pinkCells[pointsRowIndex]) pinkCells[pointsRowIndex] = {};
@@ -295,17 +339,17 @@ const Rounds = () => {
 
             // Winner row for team matches
             const winnerRow: string[] = [];
-            if (round.format === 'teams' && round.teams && round.teams.length === 2) {
+            if (fullRound.format === 'teams' && fullRound.teams && fullRound.teams.length === 2) {
                 winnerRow.push('Winner');
                 let team1Wins = 0;
                 let team2Wins = 0;
                 for (let h = startHole; h <= endHole; h++) {
                     const result = getHoleWinner(h);
-                    if (result.winner === round.teams[0].name) {
-                        winnerRow.push(round.teams[0].name.substring(0, 8));
+                    if (result.winner === fullRound.teams[0].name) {
+                        winnerRow.push(fullRound.teams[0].name.substring(0, 8));
                         team1Wins++;
-                    } else if (result.winner === round.teams[1].name) {
-                        winnerRow.push(round.teams[1].name.substring(0, 8));
+                    } else if (result.winner === fullRound.teams[1].name) {
+                        winnerRow.push(fullRound.teams[1].name.substring(0, 8));
                         team2Wins++;
                     } else if (result.winner === 'Halved') {
                         winnerRow.push('Halved');
@@ -373,8 +417,38 @@ const Rounds = () => {
         });
 
         // Save the PDF
-        const fileName = `${round.course.name.replace(/\s+/g, '_')}_${round.date}.pdf`;
-        doc.save(fileName);
+        const fileName = `${fullRound.course.name.replace(/\s+/g, '_')}_${fullRound.date}.pdf`;
+        
+        // Check if running on native mobile platform
+        if (Capacitor.isNativePlatform()) {
+            // Mobile: Save to filesystem and share
+            const pdfOutput = doc.output('datauristring');
+            const base64Data = pdfOutput.split(',')[1];
+            
+            try {
+                // Write file to cache directory
+                const result = await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Directory.Cache,
+                    recursive: true
+                });
+                
+                // Share the file
+                await Share.share({
+                    title: `Golf Scorecard - ${fullRound.course.name}`,
+                    text: `Scorecard for ${fullRound.course.name} on ${formatDate(fullRound.date)}`,
+                    url: result.uri,
+                    dialogTitle: 'Share Scorecard'
+                });
+            } catch (error) {
+                console.error('Error saving/sharing PDF:', error);
+                alert('Failed to export PDF. Please try again.');
+            }
+        } else {
+            // Web: Use standard download
+            doc.save(fileName);
+        }
     }
 
     return (
@@ -421,8 +495,8 @@ const Rounds = () => {
                                             className={`status-badge ${round.completed ? 'completed' : 'in-progress'}`}>
                                             {round.completed ? 'Completed' : 'In Progress'}
                                         </span>
-                                            {round.scores.length > 0 && (
-                                                <span className="hole-progress">{round.scores.length}/18</span>
+                                            {(round.scores?.length > 0 || round.scores_count > 0) && (
+                                                <span className="hole-progress">{round.scores?.length || round.scores_count || 0}/18</span>
                                             )}
                                         </div>
                                     </div>
