@@ -1,6 +1,5 @@
 import "../styles/Components/add-round-modal.scss"
 import {useEffect, useState} from "react";
-import LocalDataService from "../services/LocalDataService.ts";
 import HttpService from "../services/HttpService.ts";
 import toast from "react-simple-toasts";
 import 'react-simple-toasts/dist/style.css';
@@ -185,6 +184,7 @@ const AddRoundModal = (props) => {
                     });
                 } catch (e) {
                     // Ignore permission errors for registered users
+                    console.error(e);
                 }
             }
         }
