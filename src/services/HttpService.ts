@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios, { AxiosError, type AxiosResponse } from 'axios';
 import StorageService from './StorageService';
 
 export default class HttpService {

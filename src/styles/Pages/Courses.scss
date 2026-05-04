@@ -116,17 +116,6 @@ $bg-card: #153015;
       transform: translateY(0);
     }
 
-    // Left accent bar
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      background: linear-gradient(180deg, $golf-light-green 0%, $golf-fairway 100%);
-    }
-
     // Top row: Icon and Course name
     .card-header {
       display: flex;

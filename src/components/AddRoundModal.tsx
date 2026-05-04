@@ -20,6 +20,7 @@ const AddRoundModal = (props) => {
 
     // Step 2: Player selection
     const [players, setPlayers] = useState([]);
+    const [friends, setFriends] = useState([]);
     const [playerSearch, setPlayerSearch] = useState('');
     const [selectedPlayers, setSelectedPlayers] = useState([]);
     const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
@@ -42,16 +43,23 @@ const AddRoundModal = (props) => {
         Promise.all([
             httpService.get('courses'),
             httpService.get('players'),
+            httpService.get('friends'),
             httpService.get('scoring-methods'),
         ])
-            .then(([coursesRes, playersRes, methodsRes]) => {
+            .then(([coursesRes, playersRes, friendsRes, methodsRes]) => {
                 const courseData = coursesRes.data?.data || [];
                 const playerData = (playersRes.data?.data || []).map((p: any) => ({
                     ...p,
                     name: `${p.name} ${p.surname || ''}`.trim(),
                 }));
+                const friendData = (friendsRes.data?.data || []).map((p: any) => ({
+                    ...p,
+                    name: `${p.name} ${p.surname || ''}`.trim(),
+                    isFriend: true,
+                }));
                 setCourses(courseData);
                 setPlayers(playerData);
+                setFriends(friendData);
                 setScoringMethods(methodsRes.data?.data || []);
             })
             .catch(() => {
@@ -84,8 +92,22 @@ const AddRoundModal = (props) => {
         course.name.toLowerCase().includes(courseSearch.toLowerCase())
     );
 
-    const filteredPlayers = players.filter(player =>
-        player.name.toLowerCase().includes(playerSearch.toLowerCase())
+    const searchWords = playerSearch.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const matchesSearch = (player: any) => {
+        if (searchWords.length === 0) return true;
+        const fullName = `${player.name} ${player.surname || ''}`.toLowerCase().trim();
+        return searchWords.every((word: string) =>
+            player.name.toLowerCase().includes(word) ||
+            (player.surname && player.surname.toLowerCase().includes(word)) ||
+            (player.phone && player.phone.toLowerCase().includes(word)) ||
+            fullName.includes(word)
+        );
+    };
+
+    const friendIds = new Set(friends.map(f => f.id));
+    const filteredFriends = friends.filter(matchesSearch);
+    const filteredOtherPlayers = players.filter(player =>
+        !friendIds.has(player.id) && matchesSearch(player)
     );
 
     const canSelectTeams = selectedPlayers.length === 2 || selectedPlayers.length === 4;
@@ -366,17 +388,43 @@ const AddRoundModal = (props) => {
                                 Selected: {selectedPlayers.length}/4 players
                             </div>
                             <div className="selection-list">
-                                {filteredPlayers.map((player) => (
-                                    <div
-                                        key={player.id}
-                                        className={`selection-item ${selectedPlayers.some(p => p.id === player.id) ? 'selected' : ''}`}
-                                        onClick={() => handlePlayerToggle(player)}
-                                    >
-                                        <span>{player.name}</span>
-                                        <span className="handicap-badge">HC: {player.handicap}</span>
-                                    </div>
-                                ))}
-                                {filteredPlayers.length === 0 && (
+                                {filteredFriends.length > 0 && (
+                                    <>
+                                        <div className="section-header">Friends</div>
+                                        {filteredFriends.map((player) => (
+                                            <div
+                                                key={player.id}
+                                                className={`selection-item ${selectedPlayers.some(p => p.id === player.id) ? 'selected' : ''}`}
+                                                onClick={() => handlePlayerToggle(player)}
+                                            >
+                                                <div className="player-info-row">
+                                                    <span className="player-name">{player.name}</span>
+                                                    {player.phone && <span className="player-phone">{player.phone}</span>}
+                                                </div>
+                                                <span className="handicap-badge">HC: {player.handicap}</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                                {filteredOtherPlayers.length > 0 && (
+                                    <>
+                                        {filteredFriends.length > 0 && <div className="section-header">Other Players</div>}
+                                        {filteredOtherPlayers.map((player) => (
+                                            <div
+                                                key={player.id}
+                                                className={`selection-item ${selectedPlayers.some(p => p.id === player.id) ? 'selected' : ''}`}
+                                                onClick={() => handlePlayerToggle(player)}
+                                            >
+                                                <div className="player-info-row">
+                                                    <span className="player-name">{player.name}</span>
+                                                    {player.phone && <span className="player-phone">{player.phone}</span>}
+                                                </div>
+                                                <span className="handicap-badge">HC: {player.handicap}</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                                {filteredFriends.length === 0 && filteredOtherPlayers.length === 0 && (
                                     <div className="no-results">No players found</div>
                                 )}
                             </div>

@@ -3,7 +3,9 @@ interface UserData {
         id: number;
         name: string;
         surname: string;
+        email: string | null;
         phone: string;
+        handicap: number;
     };
     token: string;
 }
@@ -40,5 +42,13 @@ export default class StorageService {
 
     getUser(): UserData['user'] | null {
         return this.get()?.user || null;
+    }
+
+    updateUser(user: Partial<UserData['user']>): void {
+        const data = this.get();
+        if (data) {
+            data.user = { ...data.user, ...user };
+            this.set(data);
+        }
     }
 }

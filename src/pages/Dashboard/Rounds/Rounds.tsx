@@ -5,7 +5,6 @@ import autoTable from 'jspdf-autotable';
 import {Filesystem, Directory} from '@capacitor/filesystem';
 import {Share} from '@capacitor/share';
 import {Capacitor} from '@capacitor/core';
-import LocalDataService from "../../../services/LocalDataService.ts";
 import type {Round} from "../../../services/LocalDataService.ts";
 import HttpService from "../../../services/HttpService.ts";
 
@@ -256,7 +255,6 @@ const Rounds = () => {
             // Overall match result
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            // @ts-expect-error autoTable adds lastAutoTable to doc
             // @ts-expect-error autoTable adds lastAutoTable to doc
             doc.text(`Final Result: ${matchResult}`, 14, doc.lastAutoTable.finalY + 10);
 

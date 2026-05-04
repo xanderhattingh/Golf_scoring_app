@@ -16,6 +16,7 @@ import toast from "react-simple-toasts";
 const registerSchema = z.object({
     name: z.string().min(2).max(255).optional().or(z.literal("")),
     surname: z.string().min(2).max(255).optional().or(z.literal("")),
+    email: z.string().email().optional().or(z.literal("")),
     phone: z.string().min(10).optional().or(z.literal("")),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
@@ -128,6 +129,7 @@ const Register = () => {
                 const response = await httpService.post("register", {
                     name: data.name,
                     surname: data.surname,
+                    email: data.email || undefined,
                     phone: data.phone,
                     password: data.password,
                     handicap: 0,
@@ -255,6 +257,20 @@ const Register = () => {
                                     />
                                     {errors.surname && (
                                         <span className="error-message">{errors.surname.message}</span>
+                                    )}
+                                </div>
+
+                                <div className="input-group">
+                                    <label htmlFor="email">Email Address</label>
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        placeholder="Enter your email address"
+                                        autoComplete="off"
+                                        {...register("email")}
+                                    />
+                                    {errors.email && (
+                                        <span className="error-message">{errors.email.message}</span>
                                     )}
                                 </div>
 

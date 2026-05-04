@@ -81,6 +81,7 @@ export interface Round {
     teams?: Team[];
     scores: HoleScore[];
     currentHole: number;
+    scores_count?: number;
     animalHolders?: AnimalHolders; // Current animal holders for front9 and back9
 }
 

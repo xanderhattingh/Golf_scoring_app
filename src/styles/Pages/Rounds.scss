@@ -127,14 +127,6 @@ $bg-card: #153015;
       width: 4px;
     }
 
-    &.completed::before {
-      background: linear-gradient(180deg, $accent-gold 0%, #b8960c 100%);
-    }
-
-    &.in-progress::before {
-      background: linear-gradient(180deg, $golf-light-green 0%, $golf-fairway 100%);
-    }
-
     // Top row: Course name and Status
     .card-header {
       display: flex;

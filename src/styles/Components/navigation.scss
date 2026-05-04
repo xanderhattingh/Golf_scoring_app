@@ -125,7 +125,8 @@ $bg-card: #153015;
         // Icons for each route
         &[href*="rounds"]::before { content: '🏆'; }
         &[href*="courses"]::before { content: '⛳'; }
-        &[href*="players"]::before { content: '👥'; }
+        &[href*="friends"]::before { content: '👥'; }
+        &[href*="profile"]::before { content: '👤'; }
 
         &.active:after {
           display: none;

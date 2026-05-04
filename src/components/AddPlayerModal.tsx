@@ -20,7 +20,10 @@ const player_schema = z.object({
     name: z.string().min(2).max(255),
     surname: z.string().min(2).max(255),
     phone: z.string().optional().or(z.literal("")),
-    handicap: z.coerce.number().min(0).max(54).optional().default(0),
+    handicap: z.string().refine((val) => {
+        const num = Number(val);
+        return !isNaN(num) && num >= 0 && num <= 54;
+    }, { message: 'Handicap must be between 0 and 54' }),
 })
 
 type PlayerFormData = z.infer<typeof player_schema>;
@@ -47,12 +50,12 @@ const AddPlayerModal = (props: AddPlayerModalProps) => {
             name: player.name,
             surname: player.surname,
             phone: player.phone || '',
-            handicap: player.handicap
+            handicap: String(player.handicap)
         } : {
             name: '',
             surname: '',
             phone: '',
-            handicap: 0
+            handicap: '0'
         }
     })
 
@@ -62,7 +65,7 @@ const AddPlayerModal = (props: AddPlayerModalProps) => {
                 name: player.name,
                 surname: player.surname,
                 phone: player.phone || '',
-                handicap: player.handicap
+                handicap: String(player.handicap)
             })
         }
     }, [mode, player?.id, reset])
@@ -76,7 +79,7 @@ const AddPlayerModal = (props: AddPlayerModalProps) => {
                     name: values.name,
                     surname: values.surname,
                     phone: values.phone || null,
-                    handicap: values.handicap
+                    handicap: Number(values.handicap)
                 });
                 
                 if (response.data?.success) {
@@ -89,7 +92,7 @@ const AddPlayerModal = (props: AddPlayerModalProps) => {
                     name: values.name,
                     surname: values.surname,
                     phone: values.phone || null,
-                    handicap: values.handicap
+                    handicap: Number(values.handicap)
                 });
                 
                 if (response.data?.success) {

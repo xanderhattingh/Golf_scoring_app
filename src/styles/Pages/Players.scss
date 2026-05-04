@@ -123,17 +123,6 @@ $bg-card: #153015;
       transform: translateY(0);
     }
 
-    // Left accent bar (gold for players)
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      background: linear-gradient(180deg, $accent-gold 0%, #b8960c 100%);
-    }
-
     // Top row: Avatar and Player info
     .card-header {
       display: flex;
