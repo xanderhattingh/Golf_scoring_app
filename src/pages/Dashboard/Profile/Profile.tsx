@@ -7,6 +7,7 @@ import HttpService from '../../../services/HttpService.ts'
 import StorageService from '../../../services/StorageService.ts'
 import toast from 'react-simple-toasts'
 import golfBg from '../../../assets/golf-bg-2.jpg'
+import AuthCrest from '../../../components/AuthCrest.tsx'
 
 import '../../../styles/Pages/profile.scss'
 import '../../../styles/Shared/backgrounds.scss'
@@ -42,9 +43,16 @@ const Profile = () => {
     const [showNewPassword, setShowNewPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [isPasswordOpen, setIsPasswordOpen] = useState(false)
+    const [user, setUser] = useState<any>(null)
 
     const storage = new StorageService()
     const navigate = useNavigate()
+
+    const getInitials = (u: any): string => {
+        const first = u?.name?.charAt(0) || ''
+        const last = u?.surname?.charAt(0) || ''
+        return (first + last).toUpperCase() || '?'
+    }
 
     const {
         register: registerProfile,
@@ -75,6 +83,7 @@ const Profile = () => {
             const response = await httpService.get('user')
             const user = response.data.data
             if (user) {
+                setUser(user)
                 resetProfile({
                     name: user.name || '',
                     surname: user.surname || '',
@@ -95,6 +104,7 @@ const Profile = () => {
             toast('Failed to load profile', { className: 'error-toast' })
             const localUser = storage.getUser()
             if (localUser) {
+                setUser(localUser)
                 resetProfile({
                     name: localUser.name || '',
                     surname: localUser.surname || '',
@@ -119,6 +129,7 @@ const Profile = () => {
             })
             if (response.data?.success) {
                 const updatedUser = response.data.data
+                setUser((prev: any) => ({ ...prev, ...updatedUser }))
                 storage.updateUser({
                     name: updatedUser.name,
                     surname: updatedUser.surname,
@@ -187,12 +198,40 @@ const Profile = () => {
             <div className="page-background" style={{ backgroundImage: `url(${golfBg})` }} />
             <div className="page-content">
                 <div className="profile-container">
-                    <div className="page-header-glass">
-                        <h1>👤 Profile</h1>
+                    <header className="clubhouse-header">
+                        <div className="clubhouse-header__crest">
+                            <AuthCrest />
+                        </div>
+                        <div className="clubhouse-header__titles">
+                            <h1>Profile</h1>
+                            <span className="clubhouse-header__sub">Your membership</span>
+                        </div>
+                    </header>
+
+                    <div className="membership-card">
+                        <div className="membership-card__watermark">
+                            <AuthCrest />
+                        </div>
+                        <div className="membership-card__eyebrow">Golf Scoring · Member</div>
+                        <div className="membership-card__body">
+                            <div className="membership-card__avatar">{getInitials(user)}</div>
+                            <div className="membership-card__id">
+                                <h2>{user?.name} {user?.surname}</h2>
+                                {(user?.email || user?.phone) && (
+                                    <div className="membership-card__contact">{user?.email || user?.phone}</div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="membership-card__stats">
+                            <div className="membership-card__stat">
+                                <span className="membership-card__stat-num">{user?.handicap ?? 0}</span>
+                                <span className="membership-card__stat-lbl">Handicap</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="profile-forms">
-                        <div className="glass-card profile-card">
+                        <div className="profile-section">
                             <h2>Profile Details</h2>
                             <form onSubmit={handleSubmitProfile(onSubmitProfile)} className="profile-form" autoComplete="off">
                                 <div className="input-group">
@@ -272,14 +311,19 @@ const Profile = () => {
                             </form>
                         </div>
 
-                        <div className="glass-card profile-card">
+                        <div className="profile-section">
                             <button
                                 type="button"
                                 className="collapsible-header"
                                 onClick={() => setIsPasswordOpen(!isPasswordOpen)}
                             >
                                 <h2>Change Password</h2>
-                                <span className={`chevron ${isPasswordOpen ? 'open' : ''}`}>▼</span>
+                                <span className={`chevron ${isPasswordOpen ? 'open' : ''}`}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </span>
                             </button>
                             {isPasswordOpen && (
                             <form onSubmit={handleSubmitPassword(onSubmitPassword)} className="profile-form" autoComplete="off">
@@ -363,10 +407,16 @@ const Profile = () => {
                         <div className="logout-section">
                             <button
                                 type="button"
-                                className="button-danger"
+                                className="logout-button"
                                 onClick={handleLogout}
                             >
-                                🚪 Log Out
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                                </svg>
+                                Log Out
                             </button>
                         </div>
                     </div>

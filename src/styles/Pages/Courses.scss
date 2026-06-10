@@ -1,330 +1,486 @@
-// Golf-themed courses page - Grid Layout
-$golf-fairway: #2d5a27;
-$golf-forest: #1a3d16;
-$golf-light-green: #4a7c43;
-$golf-pale-green: #7ba872;
-$accent-gold: #d4af37;
-$text-primary: #f0f7f0;
-$text-secondary: #a8c9a8;
-$text-muted: #6b9b6b;
-$bg-card: #153015;
+// ============================================================================
+// COURSES — "The Clubhouse" scorecard aesthetic
+// Each course is presented as a miniature scorecard: serif name, computed par,
+// real tee markers, and a per-hole par strip with OUT / IN totals.
+// ============================================================================
+
+$fairway:      #2d5a27;
+$forest:       #0d2818;
+$light-green:  #4a7c43;
+$pale-green:   #7ba872;
+$gold:         #d4af37;
+$gold-bright:  #f4d489;
+$cream:        #f4efe2;
+$cream-dim:    rgba(244, 239, 226, 0.62);
+$cream-faint:  rgba(244, 239, 226, 0.34);
+
+$font-display: 'Fraunces', Georgia, serif;
+$font-ui:      'Quicksand', -apple-system, sans-serif;
+$font-mono:    'JetBrains Mono', 'SF Mono', monospace;
 
 .courses-container {
   max-width: 900px;
   margin: 0 auto;
 
-  .page-header {
+  --crest-gold: #{$gold};
+  --crest-cream: #{$cream};
+  --crest-green: #{$light-green};
+
+  // -------------------------------------------------------------------------
+  // Header
+  // -------------------------------------------------------------------------
+  .clubhouse-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 16px;
+    padding: 4px 4px 20px;
     margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(123, 168, 114, 0.15);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.18);
 
-    h1 {
-      font-size: 26px;
-      font-weight: 800;
-      color: $text-primary;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-
-      &::before {
-        content: '⛳';
-        font-size: 26px;
-      }
+    &__crest svg {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5));
     }
 
-    .course-count {
-      font-size: 14px;
-      color: $text-muted;
-      font-weight: 500;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 6px 14px;
-      border-radius: 20px;
+    &__titles h1 {
+      font-family: $font-display;
+      font-optical-sizing: auto;
+      font-weight: 600;
+      font-size: 32px;
+      line-height: 1;
+      color: $cream;
+      margin: 0 0 4px;
+      letter-spacing: -0.01em;
+    }
+
+    &__sub {
+      font-family: $font-mono;
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: $gold;
     }
   }
 
-  // Empty state - glass effect
-  .empty-state-glass {
-    text-align: center;
-    padding: 60px 24px;
-    background: linear-gradient(
-                    145deg,
-                    rgba(21, 48, 21, 0.6) 0%,
-                    rgba(13, 40, 24, 0.7) 100%
-    );
-    border: 2px dashed rgba(123, 168, 114, 0.25);
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+  // -------------------------------------------------------------------------
+  // Toolbar
+  // -------------------------------------------------------------------------
+  .courses-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
 
-    .empty-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
+  .btn-course {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 20px;
+    border-radius: 12px;
+    font-family: $font-ui;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+
+    &__plus { font-size: 18px; line-height: 0; margin-top: -1px; }
+
+    &--add {
+      color: $cream;
+      background: linear-gradient(135deg, $light-green 0%, $fairway 50%, $forest 100%);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(244, 239, 226, 0.15) inset;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 175, 55, 0.55);
+      }
+      &:active { transform: translateY(0); }
+    }
+
+    &--import {
+      color: $cream-dim;
+      background: rgba(6, 18, 11, 0.4);
+      border: 1px solid rgba(123, 168, 114, 0.25);
+
+      &:hover {
+        color: $cream;
+        border-color: rgba(212, 175, 55, 0.45);
+        background: rgba(6, 18, 11, 0.6);
+      }
+    }
+  }
+
+  .courses-search {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+    display: flex;
+    align-items: center;
+
+    &__icon {
+      position: absolute;
+      left: 14px;
+      color: $cream-faint;
+      pointer-events: none;
+    }
+
+    &__input {
+      width: 100%;
+      height: 48px;
+      padding: 0 38px 0 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(123, 168, 114, 0.22);
+      background: rgba(6, 18, 11, 0.45);
+      color: $cream;
+      font-family: $font-ui;
+      font-size: 15px;
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+
+      &::placeholder { color: $cream-faint; }
+
+      &:focus {
+        outline: none;
+        border-color: $gold;
+        background: rgba(6, 18, 11, 0.65);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.13);
+      }
+    }
+
+    &__clear {
+      position: absolute;
+      right: 10px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.08);
+      color: $cream-dim;
+      font-size: 17px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+
+      &:hover { background: rgba(220, 53, 69, 0.3); color: #ff8a80; }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Grid
+  // -------------------------------------------------------------------------
+  .courses-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  // -------------------------------------------------------------------------
+  // Scorecard
+  // -------------------------------------------------------------------------
+  .scorecard {
+    position: relative;
+    background: linear-gradient(155deg, rgba(20, 45, 30, 0.72) 0%, rgba(9, 26, 16, 0.82) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 18px;
+    padding: 18px 18px 16px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(244, 239, 226, 0.05) inset;
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    animation: scorecard-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    // gold spine on the left, like a card's bound edge
+    &::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      bottom: 14px;
+      left: 0;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: linear-gradient(180deg, $gold-bright, $gold);
       opacity: 0.7;
     }
 
-    h3 {
-      font-size: 20px;
-      color: $text-secondary;
-      margin-bottom: 8px;
-    }
-
-    p {
-      font-size: 15px;
-      color: rgba(168, 201, 168, 0.8);
-      margin-bottom: 24px;
-    }
-  }
-
-  // Courses grid - Responsive
-  .courses-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-  }
-
-  .course-card {
-    background: linear-gradient(
-                    145deg,
-                    rgba(21, 48, 21, 0.75) 0%,
-                    rgba(13, 40, 24, 0.85) 100%
-    );
-    border: 1px solid rgba(123, 168, 114, 0.15);
-    border-radius: 16px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    transition: all 0.2s ease;
-    position: relative;
-    overflow: hidden;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-
     &:hover {
-      transform: translateY(-2px);
-      border-color: rgba(123, 168, 114, 0.25);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      transform: translateY(-3px);
+      border-color: rgba(212, 175, 55, 0.4);
+      box-shadow: 0 24px 50px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(212, 175, 55, 0.25);
     }
 
-    &:active {
-      transform: translateY(0);
-    }
-
-    // Top row: Icon and Course name
-    .card-header {
+    // ---- head row ----
+    &__head {
       display: flex;
       align-items: flex-start;
       gap: 14px;
-
-      .course-icon {
-        width: 48px;
-        height: 48px;
-        background: linear-gradient(135deg, rgba(45, 90, 39, 0.3) 0%, rgba(30, 74, 30, 0.4) 100%);
-        border: 1px solid rgba(74, 124, 67, 0.2);
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        flex-shrink: 0;
-      }
-
-      .course-info {
-        flex: 1;
-        min-width: 0;
-
-        .course-name {
-          font-size: 16px;
-          font-weight: 700;
-          color: $text-primary;
-          line-height: 1.3;
-          word-wrap: break-word;
-          margin-bottom: 4px;
-        }
-
-        .course-meta {
-          font-size: 13px;
-          color: $text-muted;
-        }
-      }
     }
 
-    // Bottom row: Action buttons
-    .card-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      padding-top: 12px;
-      border-top: 1px solid rgba(123, 168, 114, 0.1);
-
-      .action-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        border: none;
-        background: rgba(0, 0, 0, 0.2);
-        color: $text-secondary;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        font-size: 18px;
-
-        &:hover {
-          background: rgba(123, 168, 114, 0.2);
-          color: $text-primary;
-          transform: scale(1.05);
-        }
-
-        &:active {
-          transform: scale(0.95);
-        }
-
-        &.edit:hover {
-          background: rgba(45, 90, 39, 0.3);
-          color: #7dd87d;
-        }
-      }
-    }
-  }
-
-  // Action buttons container
-  .action-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: center;
-    margin-bottom: 24px;
-
-    .button-primary,
-    .button-secondary {
+    &__badge {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px 20px;
-      font-size: 14px;
-    }
-  }
-
-  // Action bar with search
-  .action-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 24px;
-    align-items: center;
-
-    .button-primary,
-    .button-secondary {
-      white-space: nowrap;
+      justify-content: center;
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 22px;
+      color: $gold-bright;
+      background: radial-gradient(circle at 30% 30%, rgba(45, 90, 39, 0.6), rgba(9, 26, 16, 0.9));
+      border: 1.5px solid rgba(212, 175, 55, 0.5);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(212, 175, 55, 0.08);
     }
 
-    .search-box {
+    &__title {
       flex: 1;
-      min-width: 200px;
-      max-width: 400px;
-      position: relative;
+      min-width: 0;
+
+      h2 {
+        font-family: $font-display;
+        font-optical-sizing: auto;
+        font-weight: 600;
+        font-size: 19px;
+        line-height: 1.2;
+        color: $cream;
+        margin: 2px 0 0;
+        word-wrap: break-word;
+      }
+    }
+
+    &__loc {
       display: flex;
       align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      font-family: $font-ui;
+      font-size: 12.5px;
+      color: $cream-dim;
 
-      .search-icon {
-        position: absolute;
-        left: 14px;
-        font-size: 16px;
-        opacity: 0.6;
-        pointer-events: none;
+      svg { color: $gold; opacity: 0.8; flex-shrink: 0; }
+    }
+
+    &__actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    &__btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      border: 1px solid rgba(123, 168, 114, 0.18);
+      background: rgba(0, 0, 0, 0.22);
+      color: $cream-dim;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s ease;
+
+      &:hover {
+        background: rgba(212, 175, 55, 0.16);
+        border-color: rgba(212, 175, 55, 0.4);
+        color: $gold-bright;
+        transform: translateY(-1px);
       }
 
-      .search-input-field {
-        width: 100%;
-        padding: 12px 36px 12px 40px;
-        border-radius: 12px;
-        border: 1px solid rgba(123, 168, 114, 0.2);
-        background: rgba(0, 0, 0, 0.2);
-        color: $text-primary;
-        font-size: 15px;
-        transition: all 0.2s ease;
+      &--danger:hover {
+        background: rgba(220, 53, 69, 0.18);
+        border-color: rgba(220, 53, 69, 0.4);
+        color: #ff8a80;
+      }
+    }
 
-        &::placeholder {
-          color: $text-muted;
-        }
+    // ---- stats row ----
+    &__stats {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      margin: 16px 0 14px;
+      padding-left: 4px;
+    }
 
-        &:focus {
-          outline: none;
-          border-color: $golf-pale-green;
-          background: rgba(0, 0, 0, 0.3);
-          box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
-        }
+    &__stat {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    &__stat-num {
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 22px;
+      color: $cream;
+    }
+
+    &__stat-lbl {
+      font-family: $font-ui;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: $gold;
+      margin-top: 4px;
+    }
+
+    &__tees {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      padding-right: 2px;
+    }
+
+    &__tee-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(244, 239, 226, 0.85);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    &__tees-count {
+      font-family: $font-ui;
+      font-size: 11px;
+      color: $cream-dim;
+      margin-left: 4px;
+    }
+
+    // ---- mini scorecard par strip ----
+    &__strip {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(212, 175, 55, 0.22);
+    }
+
+    &__nine {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 3px;
+    }
+
+    &__cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 0;
+      border-radius: 5px;
+      background: rgba(6, 18, 11, 0.4);
+
+      i {
+        font-family: $font-mono;
+        font-style: normal;
+        font-size: 8px;
+        letter-spacing: 0.02em;
+        color: $cream-faint;
+        text-transform: uppercase;
       }
 
-      .clear-search {
-        position: absolute;
-        right: 10px;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        border: none;
-        background: rgba(255, 255, 255, 0.1);
-        color: $text-secondary;
-        font-size: 18px;
-        line-height: 1;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-
-        &:hover {
-          background: rgba(220, 53, 69, 0.3);
-          color: #ff6b7a;
-        }
+      b {
+        font-family: $font-mono;
+        font-weight: 600;
+        font-size: 13px;
+        color: $cream;
       }
+
+      &--total {
+        background: rgba(212, 175, 55, 0.14);
+        i { color: $gold; }
+        b { color: $gold-bright; }
+      }
+    }
+
+    // ---- loading skeleton ----
+    &--skeleton {
+      height: 188px;
+      animation: scorecard-pulse 1.4s ease-in-out infinite;
+      &::before { opacity: 0.3; }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Empty state
+  // -------------------------------------------------------------------------
+  .courses-empty {
+    text-align: center;
+    padding: 54px 24px;
+    background: linear-gradient(155deg, rgba(20, 45, 30, 0.55) 0%, rgba(9, 26, 16, 0.65) 100%);
+    border: 1px dashed rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    &__crest svg {
+      width: 72px;
+      height: 72px;
+      opacity: 0.85;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+    }
+
+    h3 {
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 22px;
+      color: $cream;
+      margin: 0 0 8px;
+    }
+
+    p {
+      font-family: $font-ui;
+      font-size: 14px;
+      color: $cream-dim;
+      margin: 0 0 22px;
     }
   }
 }
 
-// Desktop adjustments
-@media screen and (min-width: 768px) {
+@keyframes scorecard-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scorecard-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 0.8; }
+}
+
+// ============================================================================
+// Larger screens — two columns, roomier scorecards
+// ============================================================================
+@media screen and (min-width: 760px) {
   .courses-container {
-    padding: 28px;
+    padding: 8px;
+
+    .clubhouse-header__titles h1 { font-size: 38px; }
+    .clubhouse-header__crest svg { width: 60px; height: 60px; }
 
     .courses-grid {
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 20px;
     }
 
-    .course-card {
-      padding: 24px;
-
-      .card-header {
-        .course-icon {
-          width: 52px;
-          height: 52px;
-          font-size: 26px;
-        }
-
-        .course-info {
-          .course-name {
-            font-size: 17px;
-          }
-        }
-      }
-    }
+    .scorecard__title h2 { font-size: 20px; }
   }
 }
 
-// Large screens - 3 columns
-@media screen and (min-width: 1200px) {
-  .courses-container {
-    .courses-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
+@media (prefers-reduced-motion: reduce) {
+  .courses-container .scorecard { animation: none; }
 }

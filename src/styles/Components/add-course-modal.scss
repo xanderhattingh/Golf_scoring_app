@@ -9,9 +9,12 @@
   }
 
   .header {
-    font-size: 20px;
-    color: white;
-    font-family: 'Quicksand', sans-serif;
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+    color: #f4efe2;
   }
 
   .close-button {
@@ -87,7 +90,7 @@
 
           &:focus {
             outline: none;
-            border-color: #155DFC;
+            border-color: #d4af37;
           }
         }
 
@@ -96,7 +99,7 @@
           padding: 10px 16px;
           border-radius: 6px;
           border: none;
-          background: #155DFC;
+          background: linear-gradient(135deg, #4a7c43, #2d5a27);
           color: white;
           font-size: 14px;
           font-family: 'Quicksand', sans-serif;
@@ -105,7 +108,7 @@
           white-space: nowrap;
 
           &:hover {
-            background: #1249cc;
+            background: linear-gradient(135deg, #5a8c53, #357032);
           }
 
           &:disabled {
@@ -161,12 +164,34 @@
 
   // Tee selection
   .tee-selection-section {
-    .section-label {
-      display: block;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 14px;
+    .section-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 12px;
-      font-weight: 500;
+
+      .section-label {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .add-tee-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.8);
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: 'Quicksand', sans-serif;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+      }
     }
 
     .tee-chips {
@@ -214,6 +239,87 @@
           width: 12px;
           height: 12px;
           border-radius: 50%;
+        }
+      }
+    }
+
+    .add-tee-form {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+
+      .add-tee-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        .add-tee-input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 10px 12px;
+          border-radius: 6px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          font-size: 14px;
+          font-family: 'Quicksand', sans-serif;
+
+          &::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+          }
+
+          &:focus {
+            outline: none;
+            border-color: #d4af37;
+          }
+        }
+
+        .color-picker-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .color-picker {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            background: none;
+          }
+
+          .color-value {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            font-family: monospace;
+            text-transform: uppercase;
+          }
+        }
+
+        .add-tee-save-btn {
+          padding: 10px 18px;
+          border-radius: 6px;
+          border: none;
+          background: linear-gradient(135deg, #4a7c43, #2d5a27);
+          color: white;
+          font-size: 14px;
+          font-family: 'Quicksand', sans-serif;
+          cursor: pointer;
+          transition: background 0.2s;
+          align-self: flex-start;
+
+          &:hover {
+            background: linear-gradient(135deg, #5a8c53, #357032);
+          }
+
+          &:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+            cursor: not-allowed;
+          }
         }
       }
     }
@@ -352,7 +458,7 @@
 
             &:focus {
               outline: none;
-              border-color: #155DFC;
+              border-color: #d4af37;
             }
 
             &.duplicate {

@@ -1,81 +1,116 @@
-// Golf-themed navigation
-$golf-fairway: #2d5a27;
-$golf-forest: #1a3d16;
-$golf-light-green: #4a7c43;
-$golf-pale-green: #7ba872;
-$accent-gold: #d4af37;
-$text-primary: #f0f7f0;
-$text-secondary: #a8c9a8;
-$text-muted: #6b9b6b;
-$bg-card: #153015;
+// ============================================================================
+// NAVIGATION — "Clubhouse" tab bar
+// Desktop: frosted top bar with serif wordmark + line-icon links.
+// Mobile:  frosted bottom tab bar with a gold active indicator.
+// ============================================================================
+
+$fairway:      #2d5a27;
+$forest:       #0d2818;
+$light-green:  #4a7c43;
+$pale-green:   #7ba872;
+$gold:         #d4af37;
+$gold-bright:  #f4d489;
+$cream:        #f4efe2;
+$cream-dim:    rgba(244, 239, 226, 0.5);
+
+$font-display: 'Fraunces', Georgia, serif;
+$font-ui:      'Quicksand', -apple-system, sans-serif;
 
 .navigation-container {
   // Desktop: top bar
-  background: linear-gradient(180deg, $bg-card 0%, rgba(21, 48, 21, 0.98) 100%);
-  height: 64px;
+  position: relative;
+  height: 66px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 28px;
   box-sizing: border-box;
-  border-bottom: 1px solid rgba(123, 168, 114, 0.15);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
 
+  --crest-gold: #{$gold};
+  --crest-cream: #{$cream};
+  --crest-green: #{$light-green};
+
+  background: linear-gradient(180deg, rgba(13, 40, 24, 0.92) 0%, rgba(8, 24, 14, 0.96) 100%);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.22);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+
+  // --- Brand (desktop only) ---
   .left {
     display: flex;
     align-items: center;
-    gap: 10px;
-    color: $text-primary;
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    gap: 12px;
 
-    &::before {
-      content: '⛳';
-      font-size: 24px;
+    .nav-brand-crest svg {
+      width: 34px;
+      height: 34px;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+    }
+
+    .nav-brand-name {
+      font-family: $font-display;
+      font-optical-sizing: auto;
+      font-weight: 600;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+      color: $cream;
+
+      span { color: $gold; font-style: italic; }
     }
   }
 
+  // --- Links ---
   .right {
     display: flex;
-    gap: 32px;
+    gap: 28px;
 
     a {
       position: relative;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 15px;
-      color: $text-muted;
-      padding: 8px 0;
-      transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 9px;
+      text-decoration: none;
+      font-family: $font-ui;
+      font-weight: 600;
+      font-size: 14px;
+      color: $cream-dim;
+      padding: 8px 2px;
+      transition: color 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
 
-      &:hover {
-        color: $text-secondary;
+      .nav-icon svg {
+        width: 19px;
+        height: 19px;
+        display: block;
+        transition: transform 0.2s ease;
       }
 
-      &.active {
-        color: $accent-gold;
+      &:hover { color: $cream; }
 
-        &:after {
-          border-radius: 100px;
-          position: absolute;
+      &.active {
+        color: $gold;
+
+        &::after {
           content: "";
-          width: 100%;
-          height: 3px;
-          background: linear-gradient(90deg, $accent-gold 0%, #f4d03f 100%);
+          position: absolute;
           left: 0;
+          right: 0;
           bottom: -4px;
-          box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+          height: 3px;
+          border-radius: 100px;
+          background: linear-gradient(90deg, $gold 0%, $gold-bright 100%);
+          box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
         }
       }
     }
   }
 
+  // ==========================================================================
   // Mobile: bottom tab bar
+  // ==========================================================================
   @media screen and (max-width: 768px) {
     position: fixed;
     bottom: 0;
@@ -83,18 +118,16 @@ $bg-card: #153015;
     right: 0;
     top: auto;
     height: auto;
-    min-height: 64px;
-    padding: 8px 0;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
-    border-bottom: none;
-    border-top: 1px solid rgba(123, 168, 114, 0.15);
-    z-index: 1000;
+    min-height: 62px;
+    padding: 6px 0;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
     justify-content: center;
-    background: linear-gradient(0deg, #123012 0%, $bg-card 100%);
+    border-bottom: none;
+    border-top: 1px solid rgba(212, 175, 55, 0.22);
+    background: linear-gradient(0deg, rgba(8, 24, 14, 0.97) 0%, rgba(13, 40, 24, 0.94) 100%);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
 
-    .left {
-      display: none;
-    }
+    .left { display: none; }
 
     .right {
       width: 100%;
@@ -102,57 +135,59 @@ $bg-card: #153015;
       justify-content: space-around;
 
       a {
-        display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        padding: 8px 12px;
-        font-size: 11px;
-        font-weight: 600;
+        gap: 5px;
+        padding: 8px 4px 4px;
         min-width: 64px;
+        font-size: 10px;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        -webkit-tap-highlight-color: transparent;
-        transition: all 0.2s ease;
+        letter-spacing: 0.08em;
 
-        // Icon styles
-        &::before {
-          font-size: 22px;
-          filter: grayscale(0.3);
-          transition: all 0.2s ease;
+        .nav-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          svg { width: 23px; height: 23px; }
         }
 
-        // Icons for each route
-        &[href*="rounds"]::before { content: '🏆'; }
-        &[href*="courses"]::before { content: '⛳'; }
-        &[href*="friends"]::before { content: '👥'; }
-        &[href*="profile"]::before { content: '👤'; }
-
-        &.active:after {
-          display: none;
+        // gold pip indicator above the active tab
+        &::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 50%;
+          transform: translateX(-50%) scaleX(0);
+          width: 26px;
+          height: 3px;
+          border-radius: 100px;
+          background: linear-gradient(90deg, $gold 0%, $gold-bright 100%);
+          box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         &.active {
-          color: $accent-gold;
-          transform: translateY(-2px);
+          color: $gold;
 
-          &::before {
-            filter: grayscale(0);
-            transform: scale(1.1);
+          &::after {
+            bottom: auto;
+            transform: translateX(-50%) scaleX(1);
+          }
+
+          .nav-icon svg {
+            transform: translateY(-1px);
+            filter: drop-shadow(0 2px 6px rgba(212, 175, 55, 0.5));
           }
         }
 
-        &:active {
-          transform: scale(0.95);
-        }
+        &:active .nav-icon svg { transform: scale(0.9); }
       }
     }
   }
 }
 
-// Add padding to main content on mobile to account for bottom nav
+// Keep page content clear of the fixed bottom bar on mobile
 @media screen and (max-width: 768px) {
-  body {
-    padding-bottom: 90px;
-  }
+  body { padding-bottom: 88px; }
 }

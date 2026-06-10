@@ -105,11 +105,39 @@ class GolfCourseApiService {
     /**
      * Get all available color tees for a course.
      * Returns a map of color -> tee data for colors that exist.
+     * @deprecated Use getAllColorTeesDynamic instead for full color support
      */
     getAllColorTees(course: ApiCourse): Record<string, ApiTee> {
         const colors = ['yellow', 'white', 'red', 'blue'];
         const result: Record<string, ApiTee> = {};
         
+        for (const color of colors) {
+            const tee = this.findBestTeeByColor(course, color);
+            if (tee) {
+                result[color] = tee;
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * Dynamically detect all color tees from male tees.
+     * Extracts the first word of each tee name as the color key.
+     * Returns a map of color -> tee data for colors that exist.
+     */
+    getAllColorTeesDynamic(course: ApiCourse): Record<string, ApiTee> {
+        const maleTees = course.tees?.male || [];
+        const colors = new Set<string>();
+        
+        for (const tee of maleTees) {
+            const match = tee.tee_name.match(/^([A-Za-z]+)/);
+            if (match) {
+                colors.add(match[1].toLowerCase());
+            }
+        }
+        
+        const result: Record<string, ApiTee> = {};
         for (const color of colors) {
             const tee = this.findBestTeeByColor(course, color);
             if (tee) {

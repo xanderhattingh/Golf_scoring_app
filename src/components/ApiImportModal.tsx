@@ -12,10 +12,31 @@ interface ExistingCourse {
     location: string | null;
 }
 
+interface Tee {
+    id: number;
+    name: string;
+    description: string;
+    colour_code: string;
+}
+
 interface ApiImportModalProps {
     onClose: () => void;
     onCourseImported: () => void;
 }
+
+const colorToHex: Record<string, string> = {
+    yellow: '#FFD700',
+    white: '#FFFFFF',
+    red: '#DC143C',
+    blue: '#4169E1',
+    green: '#228B22',
+    black: '#000000',
+    gold: '#FFD700',
+    silver: '#C0C0C0',
+    orange: '#FFA500',
+    purple: '#800080',
+    pink: '#FFC0CB',
+};
 
 const ApiImportModal = ({onClose, onCourseImported}: ApiImportModalProps) => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -26,8 +47,9 @@ const ApiImportModal = ({onClose, onCourseImported}: ApiImportModalProps) => {
     const [error, setError] = useState('');
     const [existingCourses, setExistingCourses] = useState<ExistingCourse[]>([]);
     const [similarCourse, setSimilarCourse] = useState<ExistingCourse | null>(null);
+    const [availableTees, setAvailableTees] = useState<Tee[]>([]);
 
-    // Fetch existing courses on mount
+    // Fetch existing courses and available tees on mount
     useEffect(() => {
         const fetchExistingCourses = async () => {
             try {
@@ -38,7 +60,17 @@ const ApiImportModal = ({onClose, onCourseImported}: ApiImportModalProps) => {
                 console.error("Failed to fetch existing courses:", err);
             }
         };
+        const fetchTees = async () => {
+            try {
+                const httpService = new HttpService();
+                const response = await httpService.get("courses/tees");
+                setAvailableTees(response.data.data || []);
+            } catch (err) {
+                console.error("Failed to fetch tees:", err);
+            }
+        };
         fetchExistingCourses();
+        fetchTees();
     }, []);
 
     // Check for similar course names (case-insensitive, checks if one contains the other)
@@ -132,8 +164,8 @@ const ApiImportModal = ({onClose, onCourseImported}: ApiImportModalProps) => {
         setError('');
 
         try {
-            // Get all available color tees (preferring re-rate versions with highest number)
-            const colorTees = GolfCourseApiService.getAllColorTees(selectedCourse);
+            // Get all available color tees dynamically from male tees
+            const colorTees = GolfCourseApiService.getAllColorTeesDynamic(selectedCourse);
 
             if (Object.keys(colorTees).length === 0) {
                 setError('No recognizable tees found for this course. Please select a different course.');
@@ -141,17 +173,40 @@ const ApiImportModal = ({onClose, onCourseImported}: ApiImportModalProps) => {
                 return;
             }
 
-            // Map color names to tee IDs (matching database seed order)
-            const colorToTeeId: Record<string, number> = {
-                'yellow': 1,
-                'white': 2,
-                'red': 3,
-                'blue': 4
-            };
+            // Build dynamic color -> tee_id map from available tees fetched from backend
+            const colorToTeeId: Record<string, number> = {};
+            for (const tee of availableTees) {
+                colorToTeeId[tee.name.toLowerCase()] = tee.id;
+            }
+
+            // Create any missing tees on the backend
+            const httpService = new HttpService();
+            const newTees: Tee[] = [];
+            for (const color of Object.keys(colorTees)) {
+                if (!colorToTeeId[color]) {
+                    const response = await httpService.post('tees', {
+                        name: color.charAt(0).toUpperCase() + color.slice(1),
+                        description: color.charAt(0).toUpperCase() + color.slice(1),
+                        colour_code: colorToHex[color] || '#CCCCCC',
+                    });
+                    const newTee = response.data.data;
+                    newTees.push(newTee);
+                    colorToTeeId[color] = newTee.id;
+                }
+            }
+
+            if (newTees.length > 0) {
+                setAvailableTees(prev => [...prev, ...newTees]);
+            }
 
             // Transform each color tee to our format
             const teesData = [];
             for (const [color, tee] of Object.entries(colorTees)) {
+                const mappedTeeId = colorToTeeId[color];
+                if (!mappedTeeId) {
+                    continue; // Skip colors that couldn't be resolved
+                }
+
                 const holes = tee.holes.map((hole, index) => ({
                     hole_number: index + 1,
                     par: hole.par,
@@ -168,12 +223,16 @@ const ApiImportModal = ({onClose, onCourseImported}: ApiImportModalProps) => {
                 }
 
                 teesData.push({
-                    tee_id: colorToTeeId[color],
+                    tee_id: mappedTeeId,
                     holes: holes.slice(0, 18)
                 });
             }
 
-            const httpService = new HttpService();
+            if (teesData.length === 0) {
+                setError('No matching tees found in the database. Please ensure tees are configured.');
+                setIsImporting(false);
+                return;
+            }
 
             await httpService.post("courses", {
                 name: selectedCourse.course_name,
@@ -212,7 +271,7 @@ const ApiImportModal = ({onClose, onCourseImported}: ApiImportModalProps) => {
     };
 
     const getTeeInfo = (course: ApiCourse) => {
-        const colorTees = GolfCourseApiService.getAllColorTees(course);
+        const colorTees = GolfCourseApiService.getAllColorTeesDynamic(course);
         const teeNames = Object.keys(colorTees);
 
         if (teeNames.length === 0) return 'No standard tees available';

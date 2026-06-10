@@ -1,31 +1,225 @@
-// Profile page styles
-$golf-fairway: #2d5a27;
-$golf-forest: #1a3d16;
-$golf-light-green: #4a7c43;
-$golf-pale-green: #7ba872;
-$accent-gold: #d4af37;
-$text-primary: #f0f7f0;
-$text-secondary: #a8c9a8;
-$text-muted: #6b9b6b;
+// ============================================================================
+// PROFILE — "Membership Card"
+// A premium club membership card hero, then themed detail / password sections.
+// ============================================================================
+
+$fairway:      #2d5a27;
+$forest:       #0d2818;
+$light-green:  #4a7c43;
+$pale-green:   #7ba872;
+$gold:         #d4af37;
+$gold-bright:  #f4d489;
+$cream:        #f4efe2;
+$cream-dim:    rgba(244, 239, 226, 0.62);
+$cream-faint:  rgba(244, 239, 226, 0.34);
+
+$font-display: 'Fraunces', Georgia, serif;
+$font-ui:      'Quicksand', -apple-system, sans-serif;
+$font-mono:    'JetBrains Mono', 'SF Mono', monospace;
 
 .profile-container {
   max-width: 600px;
   margin: 0 auto;
 
+  --crest-gold: #{$gold};
+  --crest-cream: #{$cream};
+  --crest-green: #{$light-green};
+
+  // -------------------------------------------------------------------------
+  // Header
+  // -------------------------------------------------------------------------
+  .clubhouse-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 4px 4px 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.18);
+
+    &__crest svg {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5));
+    }
+
+    &__titles h1 {
+      font-family: $font-display;
+      font-optical-sizing: auto;
+      font-weight: 600;
+      font-size: 32px;
+      line-height: 1;
+      color: $cream;
+      margin: 0 0 4px;
+      letter-spacing: -0.01em;
+    }
+
+    &__sub {
+      font-family: $font-mono;
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: $gold;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Membership card hero
+  // -------------------------------------------------------------------------
+  .membership-card {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 22px;
+    padding: 20px 22px 18px;
+    border-radius: 20px;
+    background:
+      linear-gradient(150deg, rgba(33, 64, 43, 0.92) 0%, rgba(9, 26, 16, 0.95) 70%);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    box-shadow:
+      0 24px 54px -22px rgba(0, 0, 0, 0.8),
+      0 0 0 1px rgba(212, 175, 55, 0.1) inset,
+      0 1px 0 rgba(244, 239, 226, 0.08) inset;
+
+    // engraved gold corner ticks
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 1px solid rgba(212, 175, 55, 0.5);
+      z-index: 1;
+    }
+    &::before { top: 12px; left: 12px; border-right: none; border-bottom: none; }
+    &::after  { bottom: 12px; right: 12px; border-left: none; border-top: none; }
+
+    &__watermark {
+      position: absolute;
+      right: -22px;
+      bottom: -28px;
+      opacity: 0.12;
+      pointer-events: none;
+      svg { width: 150px; height: 150px; }
+    }
+
+    &__eyebrow {
+      font-family: $font-mono;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: $gold;
+      margin-bottom: 16px;
+    }
+
+    &__body {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    &__avatar {
+      flex-shrink: 0;
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 26px;
+      color: $gold-bright;
+      background: radial-gradient(circle at 30% 28%, rgba(74, 124, 67, 0.7), rgba(9, 26, 16, 0.95));
+      border: 1.5px solid rgba(212, 175, 55, 0.6);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 0 4px rgba(212, 175, 55, 0.1);
+    }
+
+    &__id {
+      min-width: 0;
+
+      h2 {
+        font-family: $font-display;
+        font-optical-sizing: auto;
+        font-weight: 600;
+        font-size: 24px;
+        line-height: 1.1;
+        color: $cream;
+        margin: 0;
+        word-wrap: break-word;
+      }
+    }
+
+    &__contact {
+      margin-top: 5px;
+      font-family: $font-mono;
+      font-size: 12.5px;
+      color: $cream-dim;
+      word-break: break-all;
+    }
+
+    &__stats {
+      display: flex;
+      gap: 14px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px dashed rgba(212, 175, 55, 0.28);
+      position: relative;
+      z-index: 1;
+    }
+
+    &__stat {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    &__stat-num {
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 26px;
+      line-height: 1;
+      color: $cream;
+    }
+
+    &__stat-lbl {
+      font-family: $font-ui;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: $gold;
+      margin-top: 5px;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Sections (detail + password)
+  // -------------------------------------------------------------------------
   .profile-forms {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
   }
 
-  .profile-card {
-    padding: 24px;
+  .profile-section {
+    padding: 22px;
+    border-radius: 18px;
+    background: linear-gradient(155deg, rgba(20, 45, 30, 0.7) 0%, rgba(9, 26, 16, 0.8) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 16px 36px -20px rgba(0, 0, 0, 0.7);
 
-    h2 {
+    > h2 {
+      font-family: $font-display;
+      font-optical-sizing: auto;
+      font-weight: 600;
       font-size: 20px;
-      font-weight: 700;
-      color: $text-primary;
+      color: $cream;
       margin: 0;
+      letter-spacing: -0.01em;
     }
 
     .collapsible-header {
@@ -35,85 +229,83 @@ $text-muted: #6b9b6b;
       justify-content: space-between;
       background: none;
       border: none;
-      padding: 0 0 12px 0;
-      margin-bottom: 0;
-      border-bottom: 1px solid rgba(123, 168, 114, 0.15);
+      padding: 0;
       cursor: pointer;
       color: inherit;
       -webkit-tap-highlight-color: transparent;
 
-      &:hover h2 {
-        color: $accent-gold;
-      }
+      &:hover h2 { color: $gold; }
 
       .chevron {
-        font-size: 14px;
-        color: $text-muted;
-        transition: transform 0.2s ease;
-
-        &.open {
-          transform: rotate(180deg);
-        }
+        display: flex;
+        color: $gold;
+        transition: transform 0.25s ease;
+        &.open { transform: rotate(180deg); }
       }
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Forms
+  // -------------------------------------------------------------------------
   .profile-form {
-    margin-top: 16px;
+    margin-top: 18px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 15px;
 
     .input-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
+      margin-bottom: 0;
 
       label {
-        font-size: 14px;
+        font-family: $font-ui;
+        font-size: 12px;
         font-weight: 600;
-        color: $text-secondary;
+        color: $gold;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.1em;
       }
 
       input {
         width: 100%;
         height: 52px;
         padding: 0 16px;
-        background: rgba(31, 61, 31, 0.6);
-        border: 1px solid rgba(123, 168, 114, 0.2);
+        background: rgba(6, 18, 11, 0.5);
+        border: 1px solid rgba(123, 168, 114, 0.22);
         border-radius: 12px;
-        color: $text-primary;
+        color: $cream;
+        font-family: $font-ui;
         font-size: 16px;
-        transition: all 0.2s ease;
+        transition: all 0.18s ease;
         box-sizing: border-box;
 
-        &::placeholder {
-          color: rgba(168, 201, 168, 0.4);
-        }
+        &::placeholder { color: $cream-faint; }
 
         &:focus {
           outline: none;
-          border-color: $golf-pale-green;
-          background: rgba(31, 61, 31, 0.8);
-          box-shadow: 0 0 0 4px rgba(123, 168, 114, 0.1);
+          border-color: $gold;
+          background: rgba(6, 18, 11, 0.7);
+          box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.13);
         }
 
         &:-webkit-autofill,
         &:-webkit-autofill:hover,
         &:-webkit-autofill:focus,
         &:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 1000px rgba(31, 61, 31, 0.8) inset !important;
-          -webkit-text-fill-color: $text-primary !important;
-          caret-color: $text-primary;
+          -webkit-box-shadow: 0 0 0 1000px rgba(6, 18, 11, 0.92) inset !important;
+          -webkit-text-fill-color: $cream !important;
+          caret-color: $cream;
           transition: background-color 5000s ease-in-out 0s;
         }
       }
 
       .error-message {
-        color: #ff6b6b;
-        font-size: 13px;
+        color: #ff8a80;
+        font-family: $font-ui;
+        font-size: 12.5px;
         font-weight: 500;
       }
     }
@@ -123,56 +315,90 @@ $text-muted: #6b9b6b;
       display: flex;
       align-items: center;
 
-      input {
-        padding-right: 50px;
-      }
+      input { padding-right: 50px; }
 
       .toggle-password {
         position: absolute;
         right: 12px;
         background: none;
         border: none;
-        font-size: 20px;
+        font-size: 19px;
         cursor: pointer;
         padding: 4px;
         opacity: 0.7;
         transition: opacity 0.2s ease;
 
-        &:hover {
-          opacity: 1;
-        }
-
-        &:focus {
-          outline: none;
-        }
+        &:hover { opacity: 1; }
+        &:focus { outline: none; }
       }
     }
 
+    // Primary save button — fairway gradient with gold hairline
     .button-primary {
-      margin-top: 8px;
+      margin-top: 6px;
+      height: 52px;
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      font-family: $font-ui;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 13px;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Logout
+  // -------------------------------------------------------------------------
+  .logout-section {
+    display: flex;
+    justify-content: center;
+    padding-top: 6px;
+
+    .logout-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-width: 200px;
+      height: 50px;
+      padding: 0 24px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: $font-ui;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #ff9b91;
+      background: rgba(220, 53, 69, 0.1);
+      border: 1px solid rgba(220, 53, 69, 0.35);
+      transition: all 0.18s ease;
+      -webkit-tap-highlight-color: transparent;
+
+      &:hover {
+        background: rgba(220, 53, 69, 0.2);
+        border-color: rgba(220, 53, 69, 0.5);
+        color: #ffb0a7;
+        transform: translateY(-1px);
+      }
+      &:active { transform: translateY(0); }
     }
   }
 
   .loading-state {
     text-align: center;
     padding: 60px 20px;
-    color: $text-secondary;
+    color: $cream-dim;
+    font-family: $font-ui;
     font-size: 16px;
-  }
-
-  .logout-section {
-    display: flex;
-    justify-content: center;
-    padding-top: 8px;
-
-    .button-danger {
-      min-width: 200px;
-    }
   }
 }
 
 @media screen and (min-width: 768px) {
   .profile-container {
-    padding: 28px;
+    padding: 8px;
+
+    .clubhouse-header__titles h1 { font-size: 38px; }
+    .clubhouse-header__crest svg { width: 60px; height: 60px; }
   }
 }

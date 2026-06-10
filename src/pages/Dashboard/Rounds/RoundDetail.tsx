@@ -333,26 +333,6 @@ const RoundDetail = () => {
     // Check if this is Stableford with Animals and Pink
     const isAnimalsAndPink = round.scoring_method.id === 6;
 
-    // Get scoring method class name for styling
-    const getScoringMethodClass = (): string => {
-        switch (round.scoring_method.id) {
-            case 1:
-                return 'scoring-stroke-play';
-            case 2:
-                return 'scoring-stableford';
-            case 3:
-                return 'scoring-match-play';
-            case 4:
-                return 'scoring-stableford-pink';
-            case 5:
-                return 'scoring-animals';
-            case 6:
-                return 'scoring-animals-pink';
-            default:
-                return 'scoring-default';
-        }
-    };
-
     // Get pink player for current hole
     const getCurrentHolePinkPlayer = (): number | null => {
         const holeScore = round.scores.find(s => s.holeNumber === currentHole);
@@ -696,38 +676,34 @@ const RoundDetail = () => {
         const animals: AnimalType[] = ['tree', 'water', 'bunker', 'three_putt'];
 
         return (
-            <div className="animal-status-section">
-                <div className="animal-status-header">
-                    <span className="status-title">🦁 Animals ({nineLabel})</span>
-                    {currentHole === 9 && (
-                        <span className="nine-complete-badge">End of Front 9</span>
-                    )}
-                    {currentHole === 18 && (
-                        <span className="nine-complete-badge">End of Back 9</span>
-                    )}
+            <div className="rd-animals">
+                <div className="rd-animals__header">
+                    <span className="rd-animals__title">Animals · {nineLabel}</span>
+                    {currentHole === 9 && <span className="rd-animals__badge">End of Front 9</span>}
+                    {currentHole === 18 && <span className="rd-animals__badge">End of Back 9</span>}
                 </div>
-                <div className="animal-holders-grid">
+                <div className="rd-animals__grid">
                     {animals.map(animalType => {
                         const holder = holders[animalType];
                         const player = holder ? round.players.find(p => p.id === holder.playerId) : null;
                         const history = getAnimalHistory(animalType, isFront9);
 
                         return (
-                            <div key={animalType} className={`animal-holder-card ${holder ? 'has-holder' : ''}`}>
-                                <div className="animal-icon">{getAnimalEmoji(animalType)}</div>
-                                <div className="animal-info">
-                                    <div className="animal-name">{getAnimalLabel(animalType)}</div>
+                            <div key={animalType} className={`rd-animal-card ${holder ? 'has-holder' : ''}`}>
+                                <div className="rd-animal-card__icon">{getAnimalEmoji(animalType)}</div>
+                                <div className="rd-animal-card__info">
+                                    <div className="rd-animal-card__name">{getAnimalLabel(animalType)}</div>
                                     {player ? (
-                                        <div className="animal-holder">
-                                            <span className="holder-name">{player.name}</span>
-                                            <span className="holder-hole">H{holder.holeNumber}</span>
+                                        <div className="rd-animal-card__holder">
+                                            <span className="rd-animal-card__who">{player.name}</span>
+                                            <span className="rd-animal-card__hole">H{holder.holeNumber}</span>
                                         </div>
                                     ) : (
-                                        <div className="animal-holder empty">-</div>
+                                        <div className="rd-animal-card__holder is-empty">Nobody yet</div>
                                     )}
                                 </div>
                                 {history.length > 1 && (
-                                    <div className="animal-history-count" title={`${history.length} events this 9`}>
+                                    <div className="rd-animal-card__count" title={`${history.length} events this 9`}>
                                         {history.length}
                                     </div>
                                 )}
@@ -757,81 +733,76 @@ const RoundDetail = () => {
 
         const toggleExpand = () => setIsStatusExpanded(!isStatusExpanded);
 
+        const chevron = (
+            <svg className="rd-status__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        );
+
+        const secondaryLabel = isStrokePlay ? 'To Par' : 'Pts';
+        const scoredPar = round.scores.reduce((sum, hs) =>
+            sum + (round.course.holes.find(h => h.hole_number === hs.holeNumber)?.hole_par || 0), 0);
+        const fmtToPar = (strokes: number) => {
+            const tp = strokes - scoredPar;
+            return tp === 0 ? 'E' : tp > 0 ? `+${tp}` : `${tp}`;
+        };
+
         if (round.format === 'teams' && teamTotals && round.teams && teamTotals.length === 2) {
             const diff = teamTotals[0].holesWon - teamTotals[1].holesWon;
             let matchStatusText = 'All Square';
-            let matchStatusClass = '';
+            let matchStatusClass = 'even';
 
             if (diff > 0) {
-                matchStatusText = `${round.teams[0].name} - ${diff} up`;
+                matchStatusText = `${round.teams[0].name} — ${diff} up`;
                 matchStatusClass = 'leading';
             } else if (diff < 0) {
-                matchStatusText = `${round.teams[1].name} - ${Math.abs(diff)} up`;
+                matchStatusText = `${round.teams[1].name} — ${Math.abs(diff)} up`;
                 matchStatusClass = 'leading';
             }
 
             return (
-                <div className={`status-section ${isStatusExpanded ? 'expanded' : 'collapsed'}`}>
-                    <button className="status-toggle-header" onClick={toggleExpand}>
-                        <div className="status-summary">
-                            <span className="summary-label">Match Status</span>
-                            <span className={`summary-value ${matchStatusClass}`}>{getStatusSummary()}</span>
-                        </div>
-                        <span className="toggle-icon">{isStatusExpanded ? '▼' : '▶'}</span>
+                <div className={`rd-status ${isStatusExpanded ? 'is-open' : ''}`}>
+                    <button className="rd-status__toggle" onClick={toggleExpand}>
+                        <span className="rd-status__eyebrow">Match Status</span>
+                        <span className={`rd-status__summary ${matchStatusClass}`}>{getStatusSummary()}</span>
+                        {chevron}
                     </button>
-                    
-                    <div className="status-content">
-                        <div className="match-status">
-                            <div className="status-title">Match Status</div>
-                            <div className={`status-value ${matchStatusClass}`}>{matchStatusText}</div>
-                        </div>
+
+                    <div className="rd-status__body">
+                        <div className={`rd-match-banner ${matchStatusClass}`}>{matchStatusText}</div>
 
                         {previousHoleResult && (
-                            <div className="previous-hole-result">
-                                <div className="result-title">Hole {previousHoleResult.holeNumber} Result</div>
-                                <div
-                                    className={`result-value ${previousHoleResult.winner === 'Halved' ? 'halved' : 'won'}`}>
+                            <div className="rd-status__prev">
+                                <span className="rd-status__prev-label">Hole {previousHoleResult.holeNumber}</span>
+                                <span className={`rd-status__prev-val ${previousHoleResult.winner === 'Halved' ? 'halved' : 'won'}`}>
                                     {previousHoleResult.winner === 'Halved'
-                                        ? `Halved (${previousHoleResult.team1Best} pts each)`
-                                        : `${previousHoleResult.winner} won (${Math.max(previousHoleResult.team1Best, previousHoleResult.team2Best)} vs ${Math.min(previousHoleResult.team1Best, previousHoleResult.team2Best)} pts)`
+                                        ? `Halved · ${previousHoleResult.team1Best} pts each`
+                                        : `${previousHoleResult.winner} · ${Math.max(previousHoleResult.team1Best, previousHoleResult.team2Best)}–${Math.min(previousHoleResult.team1Best, previousHoleResult.team2Best)}`
                                     }
-                                </div>
+                                </span>
                             </div>
                         )}
 
-                        <div className="holes-summary">
-                            <div className="team-holes">
-                                <span className="team-name">{round.teams[0].name}</span>
-                                <span className="holes-won">{teamTotals[0].holesWon} won</span>
-                            </div>
-                            <div className="halved-holes">
-                                <span>{teamTotals[0].holesHalved} halved</span>
-                            </div>
-                            <div className="team-holes">
-                                <span className="team-name">{round.teams[1].name}</span>
-                                <span className="holes-won">{teamTotals[1].holesWon} won</span>
-                            </div>
+                        <div className="rd-teamscore">
+                            {teamTotals.map((team, idx) => (
+                                <div key={idx} className="rd-teamscore__col">
+                                    <span className="rd-teamscore__name">{team.name}</span>
+                                    <span className="rd-teamscore__won">{team.holesWon}</span>
+                                    <span className="rd-teamscore__sub">holes won · {team.points} pts</span>
+                                </div>
+                            ))}
                         </div>
 
-                        <div className="team-points-totals">
-                            <div className="status-title">Total Points</div>
-                            <div className="team-scores">
-                                {teamTotals.map((team, idx) => (
-                                    <div key={idx} className="score-item">
-                                        <span className="name">{team.name}</span>
-                                        <span className="value">{team.points}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="status-title">Strokes/Points</div>
-                        <div className="player-scores">
+                        <div className="rd-status__title">Players</div>
+                        <div className="rd-leaderboard">
                             {round.players.map(player => (
-                                <div key={player.id} className="score-item">
-                                    <span className="name">{player.name}</span>
-                                    <span className="value">
-                                        {playerTotals[player.id]?.strokes || 0}/{playerTotals[player.id]?.points || 0}
+                                <div key={player.id} className="rd-leaderboard__row">
+                                    <span className="rd-leaderboard__avatar">{getInitials(player.name)}</span>
+                                    <span className="rd-leaderboard__name">{player.name}</span>
+                                    <span className="rd-leaderboard__strokes">{playerTotals[player.id]?.strokes || 0}</span>
+                                    <span className="rd-leaderboard__secondary">
+                                        {isStrokePlay ? fmtToPar(playerTotals[player.id]?.strokes || 0) : (playerTotals[player.id]?.points || 0)}
                                     </span>
                                 </div>
                             ))}
@@ -843,27 +814,30 @@ const RoundDetail = () => {
 
         // Individual format
         return (
-            <div className={`status-section ${isStatusExpanded ? 'expanded' : 'collapsed'}`}>
-                <button className="status-toggle-header" onClick={toggleExpand}>
-                    <div className="status-summary">
-                        <span className="summary-label">Scores</span>
-                        <span className="summary-value">{round.players.length} Players</span>
-                    </div>
-                    <span className="toggle-icon">{isStatusExpanded ? '▼' : '▶'}</span>
+            <div className={`rd-status ${isStatusExpanded ? 'is-open' : ''}`}>
+                <button className="rd-status__toggle" onClick={toggleExpand}>
+                    <span className="rd-status__eyebrow">Leaderboard</span>
+                    <span className="rd-status__summary">{round.players.length} players · {round.scores.length}/18</span>
+                    {chevron}
                 </button>
-                
-                <div className="status-content">
-                    <div className="status-title">Strokes/Points</div>
-                    <div className="player-scores">
-                        {round.players.map(player => (
-                            <div key={player.id} className="score-item">
-                                <span className="name">{player.name}</span>
-                                <span className="value">
-                                    {playerTotals[player.id]?.strokes || 0}/{playerTotals[player.id]?.points || 0}
-                                </span>
-                            </div>
-                        ))}
+
+                <div className="rd-status__body">
+                    <div className="rd-leaderboard rd-leaderboard--head">
+                        <span className="rd-leaderboard__avatar" />
+                        <span className="rd-leaderboard__name">Player</span>
+                        <span className="rd-leaderboard__strokes">Strokes</span>
+                        <span className="rd-leaderboard__secondary">{secondaryLabel}</span>
                     </div>
+                    {round.players.map(player => (
+                        <div key={player.id} className="rd-leaderboard__row">
+                            <span className="rd-leaderboard__avatar">{getInitials(player.name)}</span>
+                            <span className="rd-leaderboard__name">{player.name}</span>
+                            <span className="rd-leaderboard__strokes">{playerTotals[player.id]?.strokes || 0}</span>
+                            <span className="rd-leaderboard__secondary">
+                                {isStrokePlay ? fmtToPar(playerTotals[player.id]?.strokes || 0) : (playerTotals[player.id]?.points || 0)}
+                            </span>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
@@ -1125,24 +1099,30 @@ const RoundDetail = () => {
 
     const allHolesScored = round.scores.length === 18;
 
+    const getInitials = (name: string): string =>
+        (name || '').split(' ').filter(Boolean).map(p => p.charAt(0)).slice(0, 2).join('').toUpperCase() || '?';
+
+    const isStrokePlay = round.scoring_method.id === 1;
+
     const renderAnimalToggles = (playerId: number) => {
         if (!isAnimalScoring) return null;
 
         const animals: AnimalType[] = ['tree', 'water', 'bunker', 'three_putt'];
 
         return (
-            <div className="animal-toggles">
+            <div className="rd-animal-toggles">
                 {animals.map(animalType => {
                     const isActive = hasAnimalEvent(playerId, animalType);
                     return (
                         <button
                             key={animalType}
                             type="button"
-                            className={`animal-toggle-btn ${isActive ? 'active' : ''}`}
+                            className={`rd-animal-toggle ${isActive ? 'is-active' : ''}`}
                             onClick={() => handleAnimalToggle(playerId, animalType)}
                             title={getAnimalLabel(animalType)}
                         >
-                            <span className="animal-emoji">{getAnimalEmoji(animalType)}</span>
+                            <span className="rd-animal-toggle__emoji">{getAnimalEmoji(animalType)}</span>
+                            <span className="rd-animal-toggle__label">{getAnimalLabel(animalType)}</span>
                         </button>
                     );
                 })}
@@ -1150,63 +1130,78 @@ const RoundDetail = () => {
         );
     };
 
-    const renderPlayerScoreInput = (player: typeof round.players[0]) => (
-        <div key={player.id} className={`player-score-input ${getScoringMethodClass()}`}>
-            <div className="player-info-row">
-                <span className="player-name">{player.name}</span>
-                <span className="player-handicap">HC: {player.handicap}</span>
-            </div>
-            {renderAnimalToggles(player.id)}
-            <div className="score-row">
-                <NumberPicker
-                    value={currentScores[player.id]}
-                    placeholder={currentHoleData?.hole_par}
-                    min={1}
-                    max={15}
-                    onChange={(val) => handleScoreChange(player.id, val)}
-                    label={player.name}
-                />
-                <div className="points-display">
-                    {(() => {
-                        const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
-                        const isDefault = !currentScores[player.id];
-                        return (
-                            <>
-                                <span className={isDefault ? 'points-default' : ''}>
-                                    {calculatePlayerPoints(player.id, strokes, true)}
-                                </span>
-                                {(isStablefordPink || isAnimalsAndPink) && currentPinkPlayer === player.id && (
-                                    <span className="points-multiplier">2x</span>
-                                )}
-                            </>
-                        );
-                    })()}
+    const renderPlayerScoreInput = (player: typeof round.players[0]) => {
+        const strokes = currentScores[player.id] || currentHoleData?.hole_par || 0;
+        const isDefault = !currentScores[player.id];
+        const isPink = (isStablefordPink || isAnimalsAndPink) && currentPinkPlayer === player.id;
+        const par = currentHoleData?.hole_par || 0;
+        const toPar = strokes - par;
+        const toParLabel = toPar === 0 ? 'E' : toPar > 0 ? `+${toPar}` : `${toPar}`;
+        const toParClass = toPar < 0 ? 'under' : toPar > 0 ? 'over' : 'even';
+        const points = calculatePlayerPoints(player.id, strokes, true);
+
+        return (
+            <div key={player.id} className={`rd-player ${isPink ? 'rd-player--pink' : ''}`}>
+                <div className="rd-player__head">
+                    <span className="rd-player__avatar">{getInitials(player.name)}</span>
+                    <div className="rd-player__id">
+                        <span className="rd-player__name">{player.name}</span>
+                        <span className="rd-player__hcp">HCP {player.handicap}</span>
+                    </div>
+                    {isPink && <span className="rd-player__pink">2× Pink</span>}
+                </div>
+
+                {renderAnimalToggles(player.id)}
+
+                <div className="rd-player__score">
+                    <NumberPicker
+                        value={currentScores[player.id]}
+                        placeholder={currentHoleData?.hole_par}
+                        min={1}
+                        max={15}
+                        onChange={(val) => handleScoreChange(player.id, val)}
+                        label={player.name}
+                    />
+                    {isStrokePlay ? (
+                        <div className={`rd-stat rd-stat--topar ${toParClass}`}>
+                            <span className="rd-stat__num">{strokes > 0 ? toParLabel : '–'}</span>
+                            <span className="rd-stat__lbl">To Par</span>
+                        </div>
+                    ) : (
+                        <div className="rd-stat">
+                            <span className={`rd-stat__num ${isDefault ? 'is-default' : ''}`}>{points}</span>
+                            <span className="rd-stat__lbl">{isPink ? 'Pts ×2' : 'Points'}</span>
+                        </div>
+                    )}
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderScoreInputs = () => {
         if (round.format === 'teams' && round.teams) {
-            return round.teams.map(team => (
-                <div key={team.id} className="team-group">
-                    <div className="team-header">
-                        <span className="team-flag">{team.id === 1 ? '🔴' : '🔵'}</span>
-                        <h4>{team.name}</h4>
-                    </div>
-                    <div className="team-players-grid">
-                        {round.players
-                            .filter(p => team.playerIds.includes(p.id))
-                            .map(player => renderPlayerScoreInput(player))
-                        }
-                    </div>
+            return (
+                <div className="rd-teams">
+                    {round.teams.map((team, idx) => (
+                        <div key={team.id} className={`rd-team rd-team--${idx === 0 ? 'one' : 'two'}`}>
+                            <div className="rd-team__header">
+                                <span className="rd-team__dot" />
+                                <h4>{team.name}</h4>
+                            </div>
+                            <div className="rd-players">
+                                {round.players
+                                    .filter(p => team.playerIds.includes(p.id))
+                                    .map(player => renderPlayerScoreInput(player))
+                                }
+                            </div>
+                        </div>
+                    ))}
                 </div>
-            ));
+            );
         }
 
-        // Individual format - also use grid layout
         return (
-            <div className="players-grid">
+            <div className="rd-players">
                 {round.players.map(player => renderPlayerScoreInput(player))}
             </div>
         );
@@ -1274,110 +1269,130 @@ const RoundDetail = () => {
                     </div>
                 )}
 
-                <div className="round-header">
-                    <button className="back-button" onClick={() => navigate('/dashboard/rounds')}>
-                        &larr; Back to Rounds
+                <div className="rd-topbar">
+                    <button className="rd-back" onClick={() => navigate('/dashboard/rounds')} title="Back to rounds">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
                     </button>
-                    <div className="round-info">
-                        <h2>⛳ {round.course.name}</h2>
-                        <div className="meta-badges">
-                            <span className="scoring-method">{round.scoring_method.name}</span>
-                            {round.format === 'teams' && <span className="format-badge">Team Format</span>}
+                    <div className="rd-topbar__title">
+                        <h2>{round.course.name}</h2>
+                        <div className="rd-topbar__badges">
+                            <span className="rd-method">{round.scoring_method.name}</span>
+                            {round.format === 'teams' && <span className="rd-format">Teams</span>}
                         </div>
                     </div>
                     {round.scores.length > 0 && (
-                        <button 
-                            className="clear-round-btn"
+                        <button
+                            className="rd-clear"
                             onClick={() => setShowClearRoundModal(true)}
                             title="Clear all scores"
                         >
-                            🗑️
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
                         </button>
                     )}
                 </div>
 
-                {renderAnimalStatus()}
                 {renderStatus()}
 
-                <div className="current-hole-section">
-                    <div className="hole-selector">
-                        <button
-                            onClick={() => handleNavigateHole(currentHole === 1 ? 18 : currentHole - 1)}
-                        >
-                            &lt;
-                        </button>
-                        <span>Hole {currentHole}</span>
-                        <button
-                            onClick={() => handleNavigateHole(currentHole === 18 ? 1 : currentHole + 1)}
-                        >
-                            &gt;
-                        </button>
-                    </div>
-
-                    <div className="hole-info editable">
-                        <div className="info-badge par editable">
-                            <span className="label">Par</span>
-                            <NumberPicker
-                                value={currentHoleData?.hole_par}
-                                placeholder={4}
-                                min={3}
-                                max={5}
-                                onChange={(value) => handleHoleDataChange('hole_par', value)}
-                                title="Select Par"
-                            />
-                        </div>
-                        <div className="info-badge stroke-index editable">
-                            <span className="label">Stroke Index</span>
-                            <NumberPicker
-                                value={currentHoleData?.hole_stroke}
-                                placeholder={1}
-                                min={1}
-                                max={18}
-                                onChange={(value) => handleHoleDataChange('hole_stroke', value)}
-                                title="Select Stroke Index"
-                            />
-                        </div>
-                    </div>
-
-                    {(isStablefordPink || isAnimalsAndPink) && (
-                        <div className="pink-ball-section">
-                            <label className="pink-ball-label">Pink Ball (Double Points):</label>
-                            <div className="pink-ball-players">
-                                {round.players.map(player => (
-                                    <button
-                                        key={player.id}
-                                        type="button"
-                                        className={`pink-ball-btn ${currentPinkPlayer === player.id ? 'selected' : ''}`}
-                                        onClick={() => handlePinkPlayerChange(player.id)}
-                                    >
-                                        {player.name}
-                                    </button>
-                                ))}
+                <div className="rd-hole">
+                    <button
+                        className="rd-hole__nav"
+                        onClick={() => handleNavigateHole(currentHole === 1 ? 18 : currentHole - 1)}
+                        aria-label="Previous hole"
+                    >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <div className="rd-hole__center">
+                        <span className="rd-hole__label">Hole</span>
+                        <span className="rd-hole__num">{currentHole}</span>
+                        <div className="rd-hole__meta">
+                            <div className="rd-hole__meta-item">
+                                <span className="rd-hole__meta-label">Par</span>
+                                <NumberPicker
+                                    value={currentHoleData?.hole_par}
+                                    placeholder={4}
+                                    min={3}
+                                    max={5}
+                                    onChange={(value) => handleHoleDataChange('hole_par', value)}
+                                    title="Select Par"
+                                />
+                            </div>
+                            <div className="rd-hole__meta-item">
+                                <span className="rd-hole__meta-label">SI</span>
+                                <NumberPicker
+                                    value={currentHoleData?.hole_stroke}
+                                    placeholder={1}
+                                    min={1}
+                                    max={18}
+                                    onChange={(value) => handleHoleDataChange('hole_stroke', value)}
+                                    title="Select Stroke Index"
+                                />
                             </div>
                         </div>
-                    )}
-
-                    <div className="score-inputs">
-                        {renderScoreInputs()}
                     </div>
-
+                    <button
+                        className="rd-hole__nav"
+                        onClick={() => handleNavigateHole(currentHole === 18 ? 1 : currentHole + 1)}
+                        aria-label="Next hole"
+                    >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
                 </div>
 
-                {/* Fixed bottom action bar for easy thumb access */}
-                <div className="fixed-action-bar">
+                {(isStablefordPink || isAnimalsAndPink) && (
+                    <div className="rd-pink">
+                        <div className="rd-pink__label">
+                            <span className="rd-pink__dot" /> Pink Ball — double points
+                        </div>
+                        <div className="rd-pink__players">
+                            {round.players.map(player => (
+                                <button
+                                    key={player.id}
+                                    type="button"
+                                    className={`rd-pink__btn ${currentPinkPlayer === player.id ? 'is-selected' : ''}`}
+                                    onClick={() => handlePinkPlayerChange(player.id)}
+                                >
+                                    {player.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {renderAnimalStatus()}
+
+                <div className="rd-scores">
+                    {renderScoreInputs()}
+                </div>
+
+                <div className="rd-actionbar">
                     {allHolesScored && !round.completed ? (
-                        <button
-                            className="button-primary finish-button"
-                            onClick={handleFinishRound}
-                        >
-                            ✅ Finish Round
+                        <button className="rd-finish" onClick={handleFinishRound}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Finish Round
                         </button>
                     ) : (
-                        <button
-                            className="button-secondary"
-                            onClick={handleNextHole}
-                        >
-                            Next Hole →
+                        <button className="rd-next" onClick={handleNextHole}>
+                            Next Hole
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
                         </button>
                     )}
                 </div>

@@ -1,348 +1,445 @@
-// Golf-themed rounds page - Grid Layout
-$golf-fairway: #2d5a27;
-$golf-forest: #1a3d16;
-$golf-light-green: #4a7c43;
-$golf-pale-green: #7ba872;
-$accent-gold: #d4af37;
-$text-primary: #f0f7f0;
-$text-secondary: #a8c9a8;
-$text-muted: #6b9b6b;
-$bg-card: #153015;
+// ============================================================================
+// ROUNDS — "The Card Room"
+// Each round is a card showing the course, the field (player monograms),
+// scoring format, and a hole-by-hole progress bar. Clubhouse language.
+// ============================================================================
+
+$fairway:      #2d5a27;
+$forest:       #0d2818;
+$light-green:  #4a7c43;
+$pale-green:   #7ba872;
+$gold:         #d4af37;
+$gold-bright:  #f4d489;
+$cream:        #f4efe2;
+$cream-dim:    rgba(244, 239, 226, 0.62);
+$cream-faint:  rgba(244, 239, 226, 0.34);
+$green-go:     #8fe39a;
+
+$font-display: 'Fraunces', Georgia, serif;
+$font-ui:      'Quicksand', -apple-system, sans-serif;
+$font-mono:    'JetBrains Mono', 'SF Mono', monospace;
 
 .rounds-container {
   max-width: 900px;
   margin: 0 auto;
 
-  .page-header {
+  --crest-gold: #{$gold};
+  --crest-cream: #{$cream};
+  --crest-green: #{$light-green};
+
+  // -------------------------------------------------------------------------
+  // Header
+  // -------------------------------------------------------------------------
+  .clubhouse-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 16px;
+    padding: 4px 4px 20px;
     margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(123, 168, 114, 0.15);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.18);
 
-    h1 {
-      font-size: 26px;
-      font-weight: 800;
-      color: $text-primary;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    &__crest svg {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5));
+    }
 
-      &::before {
-        content: '🏆';
-        font-size: 26px;
+    &__titles h1 {
+      font-family: $font-display;
+      font-optical-sizing: auto;
+      font-weight: 600;
+      font-size: 32px;
+      line-height: 1;
+      color: $cream;
+      margin: 0 0 4px;
+      letter-spacing: -0.01em;
+    }
+
+    &__sub {
+      font-family: $font-mono;
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: $gold;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Toolbar
+  // -------------------------------------------------------------------------
+  .rounds-toolbar {
+    display: flex;
+    margin-bottom: 24px;
+  }
+
+  .btn-round {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 22px;
+    border-radius: 12px;
+    font-family: $font-ui;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+    &__plus { font-size: 18px; line-height: 0; margin-top: -1px; }
+
+    &--add {
+      color: $cream;
+      background: linear-gradient(135deg, $light-green 0%, $fairway 50%, $forest 100%);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(244, 239, 226, 0.15) inset;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 175, 55, 0.55);
       }
-    }
-
-    .round-count {
-      font-size: 14px;
-      color: $text-muted;
-      font-weight: 500;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 6px 14px;
-      border-radius: 20px;
+      &:active { transform: translateY(0); }
     }
   }
 
-  // Empty state - glass effect
-  .empty-state-glass {
-    text-align: center;
-    padding: 60px 24px;
-    background: linear-gradient(
-                    145deg,
-                    rgba(21, 48, 21, 0.6) 0%,
-                    rgba(13, 40, 24, 0.7) 100%
-    );
-    border: 2px dashed rgba(123, 168, 114, 0.25);
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-
-    .empty-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-      opacity: 0.7;
-    }
-
-    h3 {
-      font-size: 20px;
-      color: $text-secondary;
-      margin-bottom: 8px;
-    }
-
-    p {
-      font-size: 15px;
-      color: rgba(168, 201, 168, 0.8);
-      margin-bottom: 24px;
-    }
-  }
-
-  // Rounds grid - Responsive
+  // -------------------------------------------------------------------------
+  // Grid
+  // -------------------------------------------------------------------------
   .rounds-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: 1fr;
     gap: 16px;
   }
 
+  // -------------------------------------------------------------------------
+  // Round card
+  // -------------------------------------------------------------------------
   .round-card {
-    background: linear-gradient(
-                    145deg,
-                    rgba(21, 48, 21, 0.75) 0%,
-                    rgba(13, 40, 24, 0.85) 100%
-    );
-    border: 1px solid rgba(123, 168, 114, 0.15);
-    border-radius: 16px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    padding: 18px 18px 16px 22px;
+    border-radius: 18px;
+    background: linear-gradient(155deg, rgba(20, 45, 30, 0.72) 0%, rgba(9, 26, 16, 0.82) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(244, 239, 226, 0.05) inset;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    animation: round-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 
-    &:hover {
-      transform: translateY(-2px);
-      border-color: rgba(123, 168, 114, 0.25);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-
-    // Status indicator bar
-    &.completed::before,
-    &.in-progress::before {
+    // status spine
+    &::before {
       content: '';
       position: absolute;
+      top: 14px;
+      bottom: 14px;
       left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+    }
+    &--done::before   { background: linear-gradient(180deg, $gold-bright, $gold); }
+    &--active::before { background: linear-gradient(180deg, $green-go, $light-green); }
+
+    &:hover {
+      transform: translateY(-3px);
+      border-color: rgba(212, 175, 55, 0.4);
+      box-shadow: 0 22px 46px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(212, 175, 55, 0.25);
     }
 
-    // Top row: Course name and Status
-    .card-header {
+    // ---- top row ----
+    &__top {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 12px;
+    }
 
-      .course-info {
-        flex: 1;
-        min-width: 0;
+    &__head {
+      min-width: 0;
 
-        .course-name {
-          font-size: 17px;
-          font-weight: 700;
-          color: $text-primary;
-          margin-bottom: 6px;
-          line-height: 1.3;
-          word-wrap: break-word;
-        }
-
-        .round-meta {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-
-          .meta-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 13px;
-            color: $text-muted;
-
-            &.date {
-              &::before {
-                content: '📅';
-                font-size: 12px;
-              }
-            }
-
-            &.scoring-method {
-              background: rgba(212, 175, 55, 0.12);
-              padding: 3px 10px;
-              border-radius: 12px;
-              color: $accent-gold;
-              font-weight: 500;
-              font-size: 12px;
-            }
-          }
-        }
-      }
-
-      .status-section {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 6px;
-        flex-shrink: 0;
-
-        .status-badge {
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          padding: 5px 12px;
-          border-radius: 20px;
-          white-space: nowrap;
-
-          &.completed {
-            background: rgba(212, 175, 55, 0.15);
-            color: $accent-gold;
-            border: 1px solid rgba(212, 175, 55, 0.25);
-          }
-
-          &.in-progress {
-            background: rgba(45, 90, 39, 0.2);
-            color: #7dd87d;
-            border: 1px solid rgba(123, 168, 114, 0.25);
-          }
-        }
-
-        .hole-progress {
-          font-size: 12px;
-          color: $text-muted;
-          font-family: 'JetBrains Mono', monospace;
-        }
+      h2 {
+        font-family: $font-display;
+        font-optical-sizing: auto;
+        font-weight: 600;
+        font-size: 19px;
+        line-height: 1.2;
+        color: $cream;
+        margin: 0 0 7px;
+        word-wrap: break-word;
       }
     }
 
-    // Bottom row: Action buttons
-    .card-actions {
+    &__sub {
       display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      padding-top: 12px;
-      border-top: 1px solid rgba(123, 168, 114, 0.1);
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
 
-      .action-btn {
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        border: none;
-        background: rgba(0, 0, 0, 0.2);
-        color: $text-secondary;
-        cursor: pointer;
+    &__date {
+      font-family: $font-ui;
+      font-size: 12.5px;
+      color: $cream-dim;
+    }
+
+    &__method {
+      font-family: $font-ui;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: $gold-bright;
+      background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      padding: 2px 9px;
+      border-radius: 100px;
+    }
+
+    &__format {
+      font-family: $font-ui;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: $pale-green;
+      background: rgba(123, 168, 114, 0.14);
+      border: 1px solid rgba(123, 168, 114, 0.3);
+      padding: 2px 9px;
+      border-radius: 100px;
+    }
+
+    // ---- status badge ----
+    .round-status {
+      flex-shrink: 0;
+      font-family: $font-ui;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 11px;
+      border-radius: 100px;
+      white-space: nowrap;
+
+      &--done {
+        color: $gold-bright;
+        background: rgba(212, 175, 55, 0.15);
+        border: 1px solid rgba(212, 175, 55, 0.35);
+      }
+      &--active {
+        color: $green-go;
+        background: rgba(74, 124, 67, 0.2);
+        border: 1px solid rgba(74, 124, 67, 0.4);
+      }
+    }
+
+    // ---- players / the field ----
+    &__players {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    &__avatars {
+      display: flex;
+      align-items: center;
+
+      .round-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s ease;
-        font-size: 18px;
+        font-family: $font-mono;
+        font-weight: 600;
+        font-size: 11px;
+        color: $gold-bright;
+        background: radial-gradient(circle at 30% 30%, rgba(45, 90, 39, 0.85), rgba(9, 26, 16, 0.95));
+        border: 1.5px solid rgba(212, 175, 55, 0.45);
+        margin-left: -8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 
-        &:hover {
-          background: rgba(123, 168, 114, 0.2);
-          color: $text-primary;
-          transform: scale(1.05);
-        }
+        &:first-child { margin-left: 0; }
 
-        &:active {
-          transform: scale(0.95);
-        }
-
-        &.view:hover {
-          background: rgba(45, 90, 39, 0.3);
-          color: #7dd87d;
-        }
-
-        &.export {
-          background: rgba(212, 175, 55, 0.12);
-          color: $accent-gold;
-
-          &:hover {
-            background: rgba(212, 175, 55, 0.25);
-            color: #f4d03f;
-          }
-        }
-
-        &.play:hover {
-          background: rgba(45, 90, 39, 0.3);
-          color: #7dd87d;
-        }
-
-        &.danger {
-          background: rgba(220, 53, 69, 0.12);
-          color: #ff6b7a;
-
-          &:hover {
-            background: rgba(220, 53, 69, 0.25);
-            color: #ff8585;
-          }
+        &--more {
+          color: $cream-dim;
+          font-size: 10px;
         }
       }
     }
-  }
 
-  // Action buttons container
-  .action-buttons {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 24px;
+    &__pcount {
+      font-family: $font-ui;
+      font-size: 12px;
+      color: $cream-dim;
+    }
 
-    .button-primary {
+    // ---- progress ----
+    &__progress {
       display: flex;
       align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    &__bar {
+      flex: 1;
+      height: 6px;
+      border-radius: 100px;
+      background: rgba(6, 18, 11, 0.6);
+      overflow: hidden;
+
+      span {
+        display: block;
+        height: 100%;
+        border-radius: 100px;
+        background: linear-gradient(90deg, $light-green, $green-go);
+        transition: width 0.4s ease;
+      }
+    }
+
+    &--done .round-card__bar span {
+      background: linear-gradient(90deg, $gold, $gold-bright);
+    }
+
+    &__holes {
+      font-family: $font-mono;
+      font-size: 12px;
+      font-weight: 600;
+      color: $cream;
+      flex-shrink: 0;
+    }
+
+    // ---- actions ----
+    &__actions {
+      display: flex;
       gap: 8px;
-      padding: 14px 28px;
-      font-size: 15px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(212, 175, 55, 0.2);
+    }
+
+    &__btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      height: 38px;
+      padding: 0 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(123, 168, 114, 0.2);
+      background: rgba(0, 0, 0, 0.22);
+      color: $cream-dim;
+      font-family: $font-ui;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.18s ease;
+
+      &--primary {
+        flex: 1;
+        color: $cream;
+        background: linear-gradient(135deg, rgba(74, 124, 67, 0.55), rgba(45, 90, 39, 0.55));
+        border-color: rgba(123, 168, 114, 0.4);
+
+        &:hover {
+          background: linear-gradient(135deg, rgba(90, 140, 83, 0.7), rgba(53, 112, 50, 0.7));
+          border-color: rgba(212, 175, 55, 0.4);
+          transform: translateY(-1px);
+        }
+      }
+
+      // icon-only buttons are square
+      &--gold,
+      &--danger {
+        width: 38px;
+        padding: 0;
+      }
+
+      &--gold:hover {
+        background: rgba(212, 175, 55, 0.16);
+        border-color: rgba(212, 175, 55, 0.45);
+        color: $gold-bright;
+        transform: translateY(-1px);
+      }
+
+      &--danger {
+        margin-left: auto;
+        &:hover {
+          background: rgba(220, 53, 69, 0.18);
+          border-color: rgba(220, 53, 69, 0.4);
+          color: #ff8a80;
+          transform: translateY(-1px);
+        }
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Empty state
+  // -------------------------------------------------------------------------
+  .rounds-empty {
+    text-align: center;
+    padding: 54px 24px;
+    background: linear-gradient(155deg, rgba(20, 45, 30, 0.55) 0%, rgba(9, 26, 16, 0.65) 100%);
+    border: 1px dashed rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    &__crest svg {
+      width: 72px;
+      height: 72px;
+      opacity: 0.85;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+    }
+
+    h3 {
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 22px;
+      color: $cream;
+      margin: 0 0 8px;
+    }
+
+    p {
+      font-family: $font-ui;
+      font-size: 14px;
+      color: $cream-dim;
+      margin: 0 0 22px;
     }
   }
 }
 
-// Desktop adjustments
-@media screen and (min-width: 768px) {
+@keyframes round-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ============================================================================
+// Larger screens — two columns
+// ============================================================================
+@media screen and (min-width: 760px) {
   .rounds-container {
-    padding: 28px;
+    padding: 8px;
+
+    .clubhouse-header__titles h1 { font-size: 38px; }
+    .clubhouse-header__crest svg { width: 60px; height: 60px; }
 
     .rounds-grid {
-      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-      gap: 20px;
-    }
-
-    .round-card {
-      padding: 24px;
-
-      .card-header {
-        .course-info {
-          .course-name {
-            font-size: 18px;
-          }
-
-          .round-meta {
-            .meta-item {
-              font-size: 14px;
-
-              &.scoring-method {
-                font-size: 13px;
-              }
-            }
-          }
-        }
-      }
-
-      .card-actions {
-        .action-btn {
-          width: 44px;
-          height: 44px;
-        }
-      }
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
     }
   }
 }
 
-// Large screens - 3 columns
-@media screen and (min-width: 1200px) {
-  .rounds-container {
-    .rounds-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
+@media (prefers-reduced-motion: reduce) {
+  .rounds-container .round-card { animation: none; }
 }

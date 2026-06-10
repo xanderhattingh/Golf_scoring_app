@@ -177,7 +177,7 @@ const AddFriendModal = (props: AddFriendModalProps) => {
                                         <span className="result-name">{result.name} {result.surname}</span>
                                         {result.phone && <span className="result-phone">{result.phone}</span>}
                                     </div>
-                                    <span className="handicap-badge">HC: {result.handicap}</span>
+                                    <span className="handicap-badge">{result.handicap}</span>
                                 </div>
                             ))}
                         </div>

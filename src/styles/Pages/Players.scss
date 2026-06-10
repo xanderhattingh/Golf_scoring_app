@@ -1,300 +1,378 @@
-// Golf-themed players page - Grid Layout
-$golf-fairway: #2d5a27;
-$golf-forest: #1a3d16;
-$golf-light-green: #4a7c43;
-$golf-pale-green: #7ba872;
-$accent-gold: #d4af37;
-$text-primary: #f0f7f0;
-$text-secondary: #a8c9a8;
-$text-muted: #6b9b6b;
-$bg-card: #153015;
+// ============================================================================
+// FRIENDS — "The Roster"
+// Playing partners as roster cards: monogram avatars, handicap as the hero
+// stat, and member / invite status tags. Matches the Clubhouse language.
+// ============================================================================
+
+$fairway:      #2d5a27;
+$forest:       #0d2818;
+$light-green:  #4a7c43;
+$pale-green:   #7ba872;
+$gold:         #d4af37;
+$gold-bright:  #f4d489;
+$cream:        #f4efe2;
+$cream-dim:    rgba(244, 239, 226, 0.62);
+$cream-faint:  rgba(244, 239, 226, 0.34);
+$sky:          #87ceeb;
+
+$font-display: 'Fraunces', Georgia, serif;
+$font-ui:      'Quicksand', -apple-system, sans-serif;
+$font-mono:    'JetBrains Mono', 'SF Mono', monospace;
 
 .players-container {
   max-width: 900px;
   margin: 0 auto;
 
-  .page-header {
+  --crest-gold: #{$gold};
+  --crest-cream: #{$cream};
+  --crest-green: #{$light-green};
+
+  // -------------------------------------------------------------------------
+  // Header
+  // -------------------------------------------------------------------------
+  .clubhouse-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(123, 168, 114, 0.15);
-
-    h1 {
-      font-size: 26px;
-      font-weight: 800;
-      color: $text-primary;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-
-      &::before {
-        content: '👥';
-        font-size: 26px;
-      }
-    }
-
-    .player-count {
-      font-size: 14px;
-      color: $text-muted;
-      font-weight: 500;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 6px 14px;
-      border-radius: 20px;
-    }
-  }
-
-  // Empty state - glass effect
-  .empty-state-glass {
-    text-align: center;
-    padding: 60px 24px;
-    background: linear-gradient(
-                    145deg,
-                    rgba(21, 48, 21, 0.6) 0%,
-                    rgba(13, 40, 24, 0.7) 100%
-    );
-    border: 2px dashed rgba(123, 168, 114, 0.25);
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-
-    .empty-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-      opacity: 0.7;
-    }
-
-    h3 {
-      font-size: 20px;
-      color: $text-secondary;
-      margin-bottom: 8px;
-    }
-
-    p {
-      font-size: 15px;
-      color: rgba(168, 201, 168, 0.8);
-      margin-bottom: 24px;
-    }
-  }
-
-  // Loading state
-  .loading-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: $text-secondary;
-    font-size: 16px;
-  }
-
-  // Players grid - Responsive
-  .players-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 16px;
+    padding: 4px 4px 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.18);
+
+    &__crest svg {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5));
+    }
+
+    &__titles h1 {
+      font-family: $font-display;
+      font-optical-sizing: auto;
+      font-weight: 600;
+      font-size: 32px;
+      line-height: 1;
+      color: $cream;
+      margin: 0 0 4px;
+      letter-spacing: -0.01em;
+    }
+
+    &__sub {
+      font-family: $font-mono;
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: $gold;
+    }
   }
 
-  .player-card {
-    background: linear-gradient(
-                    145deg,
-                    rgba(21, 48, 21, 0.75) 0%,
-                    rgba(13, 40, 24, 0.85) 100%
-    );
-    border: 1px solid rgba(123, 168, 114, 0.15);
-    border-radius: 16px;
-    padding: 20px;
+  // -------------------------------------------------------------------------
+  // Toolbar
+  // -------------------------------------------------------------------------
+  .friends-toolbar {
+    display: flex;
+    margin-bottom: 24px;
+  }
+
+  .btn-friend {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 22px;
+    border-radius: 12px;
+    font-family: $font-ui;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+    &__plus { font-size: 18px; line-height: 0; margin-top: -1px; }
+
+    &--add {
+      color: $cream;
+      background: linear-gradient(135deg, $light-green 0%, $fairway 50%, $forest 100%);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(244, 239, 226, 0.15) inset;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 175, 55, 0.55);
+      }
+      &:active { transform: translateY(0); }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Roster grid
+  // -------------------------------------------------------------------------
+  .roster-grid {
     display: grid;
-    grid-template-columns: 1fr auto;
-    grid-column-gap: 16px;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  // -------------------------------------------------------------------------
+  // Roster card
+  // -------------------------------------------------------------------------
+  .roster-card {
     position: relative;
+    background: linear-gradient(155deg, rgba(20, 45, 30, 0.72) 0%, rgba(9, 26, 16, 0.82) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 18px;
+    padding: 16px 18px 14px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(244, 239, 226, 0.05) inset;
     overflow: hidden;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    animation: roster-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 
     &:hover {
-      transform: translateY(-2px);
-      border-color: rgba(123, 168, 114, 0.25);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      transform: translateY(-3px);
+      border-color: rgba(212, 175, 55, 0.4);
+      box-shadow: 0 22px 46px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(212, 175, 55, 0.25);
     }
 
-    &:active {
-      transform: translateY(0);
-    }
-
-    // Top row: Avatar and Player info
-    .card-header {
+    // ---- top row ----
+    &__top {
       display: flex;
       align-items: center;
       gap: 14px;
-
-      .player-avatar {
-        width: 52px;
-        height: 52px;
-        background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%);
-        border: 1px solid rgba(212, 175, 55, 0.25);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 26px;
-        flex-shrink: 0;
-      }
-
-      .player-info {
-        flex: 1;
-        min-width: 0;
-
-        .player-name {
-          font-size: 17px;
-          font-weight: 700;
-          color: $text-primary;
-          line-height: 1.3;
-          word-wrap: break-word;
-          margin-bottom: 6px;
-        }
-
-        .player-handicap {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 12px;
-          background: rgba(135, 206, 235, 0.1);
-          border: 1px solid rgba(135, 206, 235, 0.2);
-          border-radius: 12px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #87ceeb;
-          font-family: 'JetBrains Mono', monospace;
-          margin-bottom: 6px;
-
-          &::before {
-            content: 'HCP';
-            font-size: 10px;
-            opacity: 0.7;
-          }
-        }
-
-        .player-invite-code {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 12px;
-          background: rgba(212, 175, 55, 0.1);
-          border: 1px solid rgba(212, 175, 55, 0.2);
-          border-radius: 12px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #d4af37;
-          font-family: 'JetBrains Mono', monospace;
-
-          &::before {
-            content: 'INVITE';
-            font-size: 10px;
-            opacity: 0.7;
-          }
-        }
-      }
     }
 
-    // Bottom row: Action buttons
-    .card-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      padding-top: 12px;
-
-      .action-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        border: none;
-        background: rgba(0, 0, 0, 0.2);
-        color: $text-secondary;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        font-size: 18px;
-
-        &:hover {
-          background: rgba(123, 168, 114, 0.2);
-          color: $text-primary;
-          transform: scale(1.05);
-        }
-
-        &:active {
-          transform: scale(0.95);
-        }
-
-        &.edit:hover {
-          background: rgba(45, 90, 39, 0.3);
-          color: #7dd87d;
-        }
-
-        &.delete:hover {
-          background: rgba(220, 53, 69, 0.3);
-          color: #ff6b6b;
-        }
-      }
-    }
-  }
-
-  // Action buttons container
-  .action-buttons {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 24px;
-
-    .button-primary {
+    &__avatar {
+      flex-shrink: 0;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
-      font-size: 15px;
-    }
-  }
-}
-
-// Desktop adjustments
-@media screen and (min-width: 768px) {
-  .players-container {
-    padding: 28px;
-
-    .players-grid {
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
+      justify-content: center;
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+      color: $gold-bright;
+      background: radial-gradient(circle at 30% 30%, rgba(45, 90, 39, 0.6), rgba(9, 26, 16, 0.9));
+      border: 1.5px solid rgba(212, 175, 55, 0.5);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(212, 175, 55, 0.08);
     }
 
-    .player-card {
-      padding: 24px;
-      display: grid;
+    &__info {
+      flex: 1;
+      min-width: 0;
 
-
-      .card-header {
-        .player-avatar {
-          width: 56px;
-          height: 56px;
-          font-size: 28px;
-        }
-
-        .player-info {
-          .player-name {
-            font-size: 18px;
-          }
-        }
+      h2 {
+        font-family: $font-display;
+        font-optical-sizing: auto;
+        font-weight: 600;
+        font-size: 18px;
+        line-height: 1.2;
+        color: $cream;
+        margin: 0;
+        word-wrap: break-word;
       }
     }
+
+    &__phone {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      font-family: $font-mono;
+      font-size: 12px;
+      color: $cream-dim;
+
+      svg { color: $gold; opacity: 0.8; flex-shrink: 0; }
+    }
+
+    // ---- handicap hero stat ----
+    &__hcp {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 56px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(6, 18, 11, 0.45);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+    }
+
+    &__hcp-num {
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 24px;
+      line-height: 1;
+      color: $cream;
+    }
+
+    &__hcp-lbl {
+      font-family: $font-ui;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: $gold;
+      margin-top: 4px;
+    }
+
+    // ---- footer row ----
+    &__foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed rgba(212, 175, 55, 0.2);
+    }
+
+    &__actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    &__btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      border: 1px solid rgba(123, 168, 114, 0.18);
+      background: rgba(0, 0, 0, 0.22);
+      color: $cream-dim;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s ease;
+
+      &:hover {
+        background: rgba(212, 175, 55, 0.16);
+        border-color: rgba(212, 175, 55, 0.4);
+        color: $gold-bright;
+        transform: translateY(-1px);
+      }
+
+      &--danger:hover {
+        background: rgba(220, 53, 69, 0.18);
+        border-color: rgba(220, 53, 69, 0.4);
+        color: #ff8a80;
+      }
+    }
+
+    // ---- skeleton ----
+    &--skeleton {
+      height: 118px;
+      animation: roster-pulse 1.4s ease-in-out infinite;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Status tags
+  // -------------------------------------------------------------------------
+  .roster-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-family: $font-ui;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    &--member {
+      color: #8fe39a;
+      background: rgba(74, 124, 67, 0.22);
+      border: 1px solid rgba(74, 124, 67, 0.45);
+      svg { stroke: #8fe39a; }
+    }
+
+    &--invite {
+      color: $gold-bright;
+      background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      font-family: $font-mono;
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+
+    &--guest {
+      color: $cream-dim;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(123, 168, 114, 0.2);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Empty state
+  // -------------------------------------------------------------------------
+  .friends-empty {
+    text-align: center;
+    padding: 54px 24px;
+    background: linear-gradient(155deg, rgba(20, 45, 30, 0.55) 0%, rgba(9, 26, 16, 0.65) 100%);
+    border: 1px dashed rgba(212, 175, 55, 0.3);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    &__crest svg {
+      width: 72px;
+      height: 72px;
+      opacity: 0.85;
+      margin-bottom: 18px;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+    }
+
+    h3 {
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 22px;
+      color: $cream;
+      margin: 0 0 8px;
+    }
+
+    p {
+      font-family: $font-ui;
+      font-size: 14px;
+      color: $cream-dim;
+      margin: 0 0 22px;
+    }
   }
 }
 
-// Large screens - 3 columns
-@media screen and (min-width: 1200px) {
+@keyframes roster-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes roster-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 0.8; }
+}
+
+// ============================================================================
+// Larger screens — two columns
+// ============================================================================
+@media screen and (min-width: 760px) {
   .players-container {
-    .players-grid {
-      grid-template-columns: repeat(3, 1fr);
+    padding: 8px;
+
+    .clubhouse-header__titles h1 { font-size: 38px; }
+    .clubhouse-header__crest svg { width: 60px; height: 60px; }
+
+    .roster-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
     }
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .players-container .roster-card { animation: none; }
 }

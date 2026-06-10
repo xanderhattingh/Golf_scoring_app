@@ -54,6 +54,12 @@ const AddCourseModal = ({
     const [bulkParInput, setBulkParInput] = useState('');
     const [bulkStrokeInput, setBulkStrokeInput] = useState('');
     const [bulkError, setBulkError] = useState('');
+    const [showAddTeeForm, setShowAddTeeForm] = useState(false);
+    const [newTeeName, setNewTeeName] = useState('');
+    const [newTeeDescription, setNewTeeDescription] = useState('');
+    const [newTeeColor, setNewTeeColor] = useState('#4a7c43');
+    const [isAddingTee, setIsAddingTee] = useState(false);
+    const [addTeeError, setAddTeeError] = useState('');
 
     const {
         register,
@@ -154,6 +160,41 @@ const AddCourseModal = ({
     };
 
     const getTeeById = (id: number) => tees.find(t => t.id === id);
+
+    const handleCreateTee = async () => {
+        if (!newTeeName.trim()) {
+            setAddTeeError('Tee name is required');
+            return;
+        }
+
+        setIsAddingTee(true);
+        setAddTeeError('');
+
+        try {
+            const httpService = new HttpService();
+            const response = await httpService.post('tees', {
+                name: newTeeName.trim(),
+                description: newTeeDescription.trim() || newTeeName.trim(),
+                colour_code: newTeeColor,
+            });
+
+            const createdTee: Tee = response.data.data;
+            setTees(prev => [...prev, createdTee]);
+            setSelectedTees(prev => [...prev, createdTee.id]);
+            setActiveTeeId(createdTee.id);
+
+            setNewTeeName('');
+            setNewTeeDescription('');
+            setNewTeeColor('#4a7c43');
+            setShowAddTeeForm(false);
+            toast(`"${createdTee.name}" tee created!`, {className: "success-toast"});
+        } catch (error: any) {
+            const message = error.response?.data?.message || error.message || 'Failed to create tee';
+            setAddTeeError(message);
+        } finally {
+            setIsAddingTee(false);
+        }
+    };
 
     const parseBulkInput = (input: string, type: 'par' | 'stroke'): number[] | null => {
         // Try comma-separated first
@@ -396,7 +437,19 @@ const AddCourseModal = ({
 
                     {/* Tee Selection */}
                     <div className="tee-selection-section">
-                        <label className="section-label">Select Tees *</label>
+                        <div className="section-label-row">
+                            <label className="section-label">Select Tees *</label>
+                            <button
+                                type="button"
+                                className="add-tee-btn"
+                                onClick={() => {
+                                    setShowAddTeeForm(!showAddTeeForm);
+                                    setAddTeeError('');
+                                }}
+                            >
+                                {showAddTeeForm ? 'Cancel' : '+ Add Tee'}
+                            </button>
+                        </div>
                         <div className="tee-chips">
                             {tees.map(tee => (
                                 <button
@@ -417,6 +470,47 @@ const AddCourseModal = ({
                                 </button>
                             ))}
                         </div>
+                        {showAddTeeForm && (
+                            <div className="add-tee-form">
+                                {addTeeError && <span className="error-text">{addTeeError}</span>}
+                                <div className="add-tee-row">
+                                    <input
+                                        type="text"
+                                        className="add-tee-input"
+                                        placeholder="Tee name (e.g. Green)"
+                                        value={newTeeName}
+                                        onChange={(e) => setNewTeeName(e.target.value)}
+                                        maxLength={50}
+                                    />
+                                    <input
+                                        type="text"
+                                        className="add-tee-input"
+                                        placeholder="Description (optional)"
+                                        value={newTeeDescription}
+                                        onChange={(e) => setNewTeeDescription(e.target.value)}
+                                        maxLength={100}
+                                    />
+                                    <div className="color-picker-wrapper">
+                                        <input
+                                            type="color"
+                                            className="color-picker"
+                                            value={newTeeColor}
+                                            onChange={(e) => setNewTeeColor(e.target.value)}
+                                            title="Pick a colour"
+                                        />
+                                        <span className="color-value">{newTeeColor}</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="add-tee-save-btn"
+                                        onClick={handleCreateTee}
+                                        disabled={isAddingTee || !newTeeName.trim()}
+                                    >
+                                        {isAddingTee ? 'Adding...' : 'Add'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {selectedTees.length === 0 && (
                             <span className="error-text">Please select at least one tee</span>
                         )}

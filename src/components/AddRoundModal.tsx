@@ -1,6 +1,7 @@
 import "../styles/Components/add-round-modal.scss"
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import HttpService from "../services/HttpService.ts";
+import StorageService from "../services/StorageService.ts";
 import toast from "react-simple-toasts";
 import 'react-simple-toasts/dist/style.css';
 import AddCourseModal from "./AddCourseModal.tsx";
@@ -36,6 +37,9 @@ const AddRoundModal = (props) => {
     const [selectedFormat, setSelectedFormat] = useState<'individual' | 'teams'>('individual');
     const [teamNames, setTeamNames] = useState<string[]>(['', '']);
     const [playerAssignments, setPlayerAssignments] = useState<Record<number, number>>({});
+
+    // The logged-in user — surfaced as a "You" quick-pick (the creator usually plays)
+    const [currentUser] = useState(() => new StorageService().getUser());
 
     // Fetch data on mount
     useEffect(() => {
@@ -104,10 +108,22 @@ const AddRoundModal = (props) => {
         );
     };
 
+    // "You" quick-pick: the logged-in user, shaped like a player row
+    const currentUserPlayer = currentUser
+        ? {...currentUser, name: `${currentUser.name} ${currentUser.surname || ''}`.trim()}
+        : null;
+    const isCurrentUserSelected = currentUserPlayer
+        ? selectedPlayers.some(p => p.id === currentUserPlayer.id)
+        : false;
+    const showYou = !!currentUserPlayer && !isCurrentUserSelected && matchesSearch(currentUserPlayer);
+    // While shown under "You", hide the user from the regular lists to avoid a duplicate.
+    // Once they're selected, "You" disappears and they appear normally (and can be deselected there).
+    const hiddenUserId = currentUserPlayer && !isCurrentUserSelected ? currentUserPlayer.id : null;
+
     const friendIds = new Set(friends.map(f => f.id));
-    const filteredFriends = friends.filter(matchesSearch);
+    const filteredFriends = friends.filter(f => f.id !== hiddenUserId && matchesSearch(f));
     const filteredOtherPlayers = players.filter(player =>
-        !friendIds.has(player.id) && matchesSearch(player)
+        !friendIds.has(player.id) && player.id !== hiddenUserId && matchesSearch(player)
     );
 
     const canSelectTeams = selectedPlayers.length === 2 || selectedPlayers.length === 4;
@@ -147,6 +163,7 @@ const AddRoundModal = (props) => {
             setSelectedPlayers(selectedPlayers.filter(p => p.id !== player.id));
         } else if (selectedPlayers.length < 4) {
             setSelectedPlayers([...selectedPlayers, player]);
+            setPlayerSearch(''); // clear the filter so the next player is easy to find
         } else {
             toast('Maximum 4 players allowed', {theme: 'failure', duration: 3000});
         }
@@ -183,7 +200,7 @@ const AddRoundModal = (props) => {
             setCurrentStep(3);
         } else if (currentStep === 3 && isStep3Valid) {
             setCurrentStep(4);
-        } else if (currentStep === 4 && isStep4Valid) {
+        } else if (currentStep === 4 && isStep4Valid && selectedScoringMethod?.id !== 1) {
             setCurrentStep(5);
         }
     }
@@ -216,8 +233,11 @@ const AddRoundModal = (props) => {
         try {
             await updatePlayerHandicaps();
 
+            // Stroke Play is always individual, regardless of any earlier format choice
+            const effectiveFormat = selectedScoringMethod?.id === 1 ? 'individual' : selectedFormat;
+
             let teamsData: { name: string; playerIds: number[] }[] | undefined;
-            if (selectedFormat === 'teams') {
+            if (effectiveFormat === 'teams') {
                 if (selectedPlayers.length === 2) {
                     teamsData = [{
                         name: teamNames[0],
@@ -254,7 +274,7 @@ const AddRoundModal = (props) => {
                 player_handicaps: playerHandicapsMap,
                 scoring_method_id: selectedScoringMethod.id,
                 date: new Date().toISOString().split('T')[0],
-                format: selectedFormat,
+                format: effectiveFormat,
                 teams: teamsData,
                 starting_hole: 1,
             });
@@ -269,6 +289,66 @@ const AddRoundModal = (props) => {
             toast(error.response?.data?.message || 'Failed to create round', {theme: 'failure', duration: 3000});
         }
     }
+
+    const getInitials = (name: string): string => {
+        return (name || '')
+            .split(' ')
+            .filter(Boolean)
+            .map((part) => part.charAt(0))
+            .slice(0, 2)
+            .join('')
+            .toUpperCase() || '?';
+    }
+
+    const adjustHandicap = (playerId: number, delta: number) => {
+        setPlayerHandicaps(prev => prev.map(p => {
+            if (p.id !== playerId) return p;
+            const next = Math.min(54, Math.max(0, (Number(p.roundHandicap) || 0) + delta));
+            return {...p, roundHandicap: next};
+        }));
+    }
+
+    // Press-and-hold to repeat, accelerating the longer it's held
+    const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const stopHold = () => {
+        if (holdTimer.current) {
+            clearTimeout(holdTimer.current);
+            holdTimer.current = null;
+        }
+    }
+
+    const startHold = (playerId: number, delta: number) => {
+        stopHold();
+        adjustHandicap(playerId, delta); // immediate first step
+        let delay = 350;
+        const tick = () => {
+            adjustHandicap(playerId, delta);
+            delay = Math.max(45, delay - 35); // speed up on each repeat
+            holdTimer.current = setTimeout(tick, delay);
+        };
+        holdTimer.current = setTimeout(tick, delay);
+        // Safety: always stop on release, even if the button became disabled mid-hold
+        window.addEventListener('pointerup', stopHold, {once: true});
+        window.addEventListener('pointercancel', stopHold, {once: true});
+    }
+
+    // Clear any running hold timer if the modal unmounts mid-press
+    useEffect(() => stopHold, []);
+
+    // Stroke Play (id 1) is individual-only, so it has no Format step
+    const isStrokePlay = selectedScoringMethod?.id === 1;
+    const steps = isStrokePlay
+        ? ['Course', 'Players', 'Handicap', 'Scoring']
+        : ['Course', 'Players', 'Handicap', 'Scoring', 'Format'];
+    const lastStep = steps.length;
+
+    const checkIcon = (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+             strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+    );
 
     if (showAddCourseModal) {
         return (
@@ -293,53 +373,62 @@ const AddRoundModal = (props) => {
     return (
         <>
             <div className="modal-container">
-                <div className="modal-content add-round-modal">
-                    <div className="modal-header">
-                        <div className="header">Create Round - Step {currentStep} of 5</div>
+                <div className="modal-content round-wizard">
+                    <div className="round-wizard__header">
+                        <div className="round-wizard__heading">
+                            <span className="round-wizard__title">Create Round</span>
+                            <span className="round-wizard__step">Step {currentStep} of {lastStep} · {steps[currentStep - 1]}</span>
+                        </div>
                         <button type="button" className="close-button" onClick={onCloseModal}>&times;</button>
                     </div>
 
-                    <div className="step-indicator">
-                        <div
-                            className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
-                            Course
-                        </div>
-                        <div
-                            className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
-                            Players
-                        </div>
-                        <div
-                            className={`step ${currentStep >= 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}>
-                            HDC
-                        </div>
-                        <div
-                            className={`step ${currentStep >= 4 ? 'active' : ''} ${currentStep > 4 ? 'completed' : ''}`}>
-                            Method
-                        </div>
-                        <div className={`step ${currentStep >= 5 ? 'active' : ''}`}>Format</div>
+                    <div className="round-stepper">
+                        {steps.map((label, i) => {
+                            const n = i + 1;
+                            const state = currentStep > n ? 'is-done' : currentStep === n ? 'is-active' : 'is-upcoming';
+                            return (
+                                <div key={label} className={`round-step ${state}`}>
+                                    <div className="round-step__dot">
+                                        {currentStep > n ? checkIcon : n}
+                                    </div>
+                                    <div className="round-step__label">{label}</div>
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {/* Step 1: Select Course */}
                     {currentStep === 1 && (
                         <div className="step-content">
-                            <div className="search-container">
+                            <div className="round-search">
+                                <svg className="round-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
                                 <input
                                     type="text"
-                                    className="search-input"
                                     placeholder="Search courses..."
                                     value={courseSearch}
                                     onChange={(e) => setCourseSearch(e.target.value)}
                                 />
                             </div>
-                            <div className="selection-list">
+                            <div className="select-list">
                                 {filteredCourses.map((course) => (
-                                    <div
+                                    <button
+                                        type="button"
                                         key={course.id}
-                                        className={`selection-item ${selectedCourse?.id === course.id ? 'selected' : ''}`}
+                                        className={`select-card ${selectedCourse?.id === course.id ? 'is-selected' : ''}`}
                                         onClick={() => handleCourseSelect(course)}
                                     >
-                                        {course.name}
-                                    </div>
+                                        <div className="select-card__main">
+                                            <span className="select-card__title">{course.name}</span>
+                                            {course.location && (
+                                                <span className="select-card__sub">{course.location}</span>
+                                            )}
+                                        </div>
+                                        <span className="select-card__check">{checkIcon}</span>
+                                    </button>
                                 ))}
                                 {filteredCourses.length === 0 && (
                                     <div className="no-results">No courses found</div>
@@ -347,24 +436,26 @@ const AddRoundModal = (props) => {
                             </div>
                             <button
                                 type="button"
-                                className="button-secondary add-new-button"
+                                className="round-add-btn"
                                 onClick={() => setShowAddCourseModal(true)}
                             >
-                                + Add New Course
+                                <span className="round-add-btn__plus">+</span> Add New Course
                             </button>
 
                             {selectedCourse && selectedCourse.tees && selectedCourse.tees.length > 0 && (
-                                <div className="tee-selection" style={{marginTop: '20px'}}>
-                                    <label>Select Tee</label>
-                                    <div className="selection-list">
+                                <div className="tee-picker">
+                                    <div className="tee-picker__label">Select Tee</div>
+                                    <div className="tee-chips">
                                         {selectedCourse.tees.map((tee) => (
-                                            <div
+                                            <button
+                                                type="button"
                                                 key={tee.id}
-                                                className={`selection-item ${selectedCourseTeeId === tee.id ? 'selected' : ''}`}
+                                                className={`tee-chip ${selectedCourseTeeId === tee.id ? 'is-selected' : ''}`}
                                                 onClick={() => setSelectedCourseTeeId(tee.id)}
                                             >
+                                                <span className="tee-chip__dot" style={{backgroundColor: tee.colour_code || '#ccc'}} />
                                                 {tee.tee_name}
-                                            </div>
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -375,65 +466,106 @@ const AddRoundModal = (props) => {
                     {/* Step 2: Select Players */}
                     {currentStep === 2 && (
                         <div className="step-content">
-                            <div className="search-container">
+                            <div className="round-search">
+                                <svg className="round-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
                                 <input
                                     type="text"
-                                    className="search-input"
                                     placeholder="Search players..."
                                     value={playerSearch}
                                     onChange={(e) => setPlayerSearch(e.target.value)}
                                 />
                             </div>
-                            <div className="selected-info">
-                                Selected: {selectedPlayers.length}/4 players
+                            <div className="select-summary">
+                                <span className="select-summary__count">{selectedPlayers.length}/4 selected</span>
+                                {selectedPlayers.length > 0 && (
+                                    <div className="select-summary__avatars">
+                                        {selectedPlayers.map((p) => (
+                                            <span key={p.id} className="player-avatar" title={p.name}>{getInitials(p.name)}</span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            <div className="selection-list">
+                            <div className="select-list">
+                                {showYou && (
+                                    <>
+                                        <div className="select-list__header">You</div>
+                                        <button
+                                            type="button"
+                                            className="select-card"
+                                            onClick={() => handlePlayerToggle(currentUserPlayer)}
+                                        >
+                                            <span className="player-avatar">{getInitials(currentUserPlayer.name)}</span>
+                                            <div className="select-card__main">
+                                                <span className="select-card__title">{currentUserPlayer.name}</span>
+                                                {currentUserPlayer.phone && <span className="select-card__sub">{currentUserPlayer.phone}</span>}
+                                            </div>
+                                            <span className="round-hcp"><b>{currentUserPlayer.handicap}</b><i>HCP</i></span>
+                                            <span className="select-card__check">{checkIcon}</span>
+                                        </button>
+                                    </>
+                                )}
                                 {filteredFriends.length > 0 && (
                                     <>
-                                        <div className="section-header">Friends</div>
-                                        {filteredFriends.map((player) => (
-                                            <div
-                                                key={player.id}
-                                                className={`selection-item ${selectedPlayers.some(p => p.id === player.id) ? 'selected' : ''}`}
-                                                onClick={() => handlePlayerToggle(player)}
-                                            >
-                                                <div className="player-info-row">
-                                                    <span className="player-name">{player.name}</span>
-                                                    {player.phone && <span className="player-phone">{player.phone}</span>}
-                                                </div>
-                                                <span className="handicap-badge">HC: {player.handicap}</span>
-                                            </div>
-                                        ))}
+                                        <div className="select-list__header">Friends</div>
+                                        {filteredFriends.map((player) => {
+                                            const sel = selectedPlayers.some(p => p.id === player.id);
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={player.id}
+                                                    className={`select-card ${sel ? 'is-selected' : ''}`}
+                                                    onClick={() => handlePlayerToggle(player)}
+                                                >
+                                                    <span className="player-avatar">{getInitials(player.name)}</span>
+                                                    <div className="select-card__main">
+                                                        <span className="select-card__title">{player.name}</span>
+                                                        {player.phone && <span className="select-card__sub">{player.phone}</span>}
+                                                    </div>
+                                                    <span className="round-hcp"><b>{player.handicap}</b><i>HCP</i></span>
+                                                    <span className="select-card__check">{checkIcon}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </>
                                 )}
                                 {filteredOtherPlayers.length > 0 && (
                                     <>
-                                        {filteredFriends.length > 0 && <div className="section-header">Other Players</div>}
-                                        {filteredOtherPlayers.map((player) => (
-                                            <div
-                                                key={player.id}
-                                                className={`selection-item ${selectedPlayers.some(p => p.id === player.id) ? 'selected' : ''}`}
-                                                onClick={() => handlePlayerToggle(player)}
-                                            >
-                                                <div className="player-info-row">
-                                                    <span className="player-name">{player.name}</span>
-                                                    {player.phone && <span className="player-phone">{player.phone}</span>}
-                                                </div>
-                                                <span className="handicap-badge">HC: {player.handicap}</span>
-                                            </div>
-                                        ))}
+                                        {filteredFriends.length > 0 && <div className="select-list__header">Other Players</div>}
+                                        {filteredOtherPlayers.map((player) => {
+                                            const sel = selectedPlayers.some(p => p.id === player.id);
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={player.id}
+                                                    className={`select-card ${sel ? 'is-selected' : ''}`}
+                                                    onClick={() => handlePlayerToggle(player)}
+                                                >
+                                                    <span className="player-avatar">{getInitials(player.name)}</span>
+                                                    <div className="select-card__main">
+                                                        <span className="select-card__title">{player.name}</span>
+                                                        {player.phone && <span className="select-card__sub">{player.phone}</span>}
+                                                    </div>
+                                                    <span className="round-hcp"><b>{player.handicap}</b><i>HCP</i></span>
+                                                    <span className="select-card__check">{checkIcon}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </>
                                 )}
-                                {filteredFriends.length === 0 && filteredOtherPlayers.length === 0 && (
+                                {!showYou && filteredFriends.length === 0 && filteredOtherPlayers.length === 0 && (
                                     <div className="no-results">No players found</div>
                                 )}
                             </div>
                             <button
                                 type="button"
-                                className="button-secondary add-new-button"
+                                className="round-add-btn"
                                 onClick={() => setShowAddPlayerModal(true)}
                             >
-                                + Add New Player
+                                <span className="round-add-btn__plus">+</span> Add New Player
                             </button>
                         </div>
                     )}
@@ -441,23 +573,44 @@ const AddRoundModal = (props) => {
                     {/* Step 3: Confirm Handicaps */}
                     {currentStep === 3 && (
                         <div className="step-content">
-                            <div className="handicap-info">
-                                <p>Confirm handicaps for <strong>{selectedCourse?.name}</strong></p>
-                            </div>
-                            <div className="handicap-list">
+                            <p className="step-hint">Confirm playing handicaps for <strong>{selectedCourse?.name}</strong></p>
+                            <div className="hcp-list">
                                 {playerHandicaps.map((player) => (
-                                    <div key={player.id} className="handicap-item">
-                                        <span className="player-name">{player.name}</span>
-                                        <input
-                                            type="number"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            className="handicap-input"
-                                            value={player.roundHandicap}
-                                            min="0"
-                                            max="54"
-                                            onChange={(e) => handleHandicapChange(player.id, e.target.value)}
-                                        />
+                                    <div key={player.id} className="hcp-row">
+                                        <span className="player-avatar">{getInitials(player.name)}</span>
+                                        <span className="hcp-row__name">{player.name}</span>
+                                        <div className="hcp-stepper">
+                                            <button
+                                                type="button"
+                                                className="hcp-stepper__btn"
+                                                onPointerDown={(e) => { e.preventDefault(); startHold(player.id, -1); }}
+                                                onPointerUp={stopHold}
+                                                onPointerLeave={stopHold}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); adjustHandicap(player.id, -1); } }}
+                                                disabled={player.roundHandicap <= 0}
+                                                aria-label="Decrease handicap"
+                                            >−</button>
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                className="hcp-stepper__value"
+                                                value={player.roundHandicap}
+                                                min="0"
+                                                max="54"
+                                                onChange={(e) => handleHandicapChange(player.id, e.target.value)}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="hcp-stepper__btn"
+                                                onPointerDown={(e) => { e.preventDefault(); startHold(player.id, 1); }}
+                                                onPointerUp={stopHold}
+                                                onPointerLeave={stopHold}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); adjustHandicap(player.id, 1); } }}
+                                                disabled={player.roundHandicap >= 54}
+                                                aria-label="Increase handicap"
+                                            >+</button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -467,27 +620,23 @@ const AddRoundModal = (props) => {
                     {/* Step 4: Select Scoring Method */}
                     {currentStep === 4 && (
                         <div className="step-content">
-                            <div className="scoring-info">
-                                <p>Select a scoring method for this round</p>
-                            </div>
-                            <div className="scoring-method-list">
+                            <p className="step-hint">Choose how you'll keep score</p>
+                            <div className="method-list">
                                 {scoringMethods.map((method) => (
-                                    <div
+                                    <button
+                                        type="button"
                                         key={method.id}
-                                        className={`scoring-method-item ${selectedScoringMethod?.id === method.id ? 'selected' : ''}`}
+                                        className={`method-card ${selectedScoringMethod?.id === method.id ? 'is-selected' : ''}`}
                                         onClick={() => handleScoringMethodSelect(method)}
                                     >
-                                        <div className="method-info">
-                                            <span className="method-name">{method.name}</span>
+                                        <div className="method-card__main">
+                                            <span className="method-card__name">{method.name}</span>
                                             {method.description && (
-                                                <span className="method-description">{method.description}</span>
+                                                <span className="method-card__desc">{method.description}</span>
                                             )}
                                         </div>
-                                        <div
-                                            className={`toggle ${selectedScoringMethod?.id === method.id ? 'active' : ''}`}>
-                                            <div className="toggle-knob"></div>
-                                        </div>
-                                    </div>
+                                        <span className="select-card__check">{checkIcon}</span>
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -496,37 +645,44 @@ const AddRoundModal = (props) => {
                     {/* Step 5: Select Format */}
                     {currentStep === 5 && (
                         <div className="step-content">
-                            <div className="format-info">
-                                <p>Select the format for this round</p>
-                            </div>
+                            <p className="step-hint">Pick the format for this round</p>
 
                             <div className="format-options">
-                                <div
-                                    className={`format-option ${selectedFormat === 'individual' ? 'selected' : ''}`}
+                                <button
+                                    type="button"
+                                    className={`format-card ${selectedFormat === 'individual' ? 'is-selected' : ''}`}
                                     onClick={() => setSelectedFormat('individual')}
                                 >
-                                    <span className="format-name">Individual</span>
-                                    <span className="format-description">Each player plays for themselves</span>
-                                </div>
+                                    <div className="format-card__main">
+                                        <span className="format-card__name">Individual</span>
+                                        <span className="format-card__desc">Each player plays for themselves</span>
+                                    </div>
+                                    <span className="select-card__check">{checkIcon}</span>
+                                </button>
 
                                 {canSelectTeams && (
-                                    <div
-                                        className={`format-option ${selectedFormat === 'teams' ? 'selected' : ''}`}
+                                    <button
+                                        type="button"
+                                        className={`format-card ${selectedFormat === 'teams' ? 'is-selected' : ''}`}
                                         onClick={() => setSelectedFormat('teams')}
                                     >
-                                        <span className="format-name">Teams</span>
-                                        <span className="format-description">
-                                            {selectedPlayers.length === 2 ? 'Both players on one team' : 'Two teams'}
-                                        </span>
-                                    </div>
+                                        <div className="format-card__main">
+                                            <span className="format-card__name">Teams</span>
+                                            <span className="format-card__desc">
+                                                {selectedPlayers.length === 2 ? 'Both players on one team' : 'Two teams of two'}
+                                            </span>
+                                        </div>
+                                        <span className="select-card__check">{checkIcon}</span>
+                                    </button>
                                 )}
                             </div>
 
                             {selectedFormat === 'teams' && selectedPlayers.length === 2 && (
                                 <div className="team-config">
-                                    <label>Team Name</label>
+                                    <div className="team-config__label">Team Name</div>
                                     <input
                                         type="text"
+                                        className="team-config__input"
                                         value={teamNames[0]}
                                         onChange={(e) => setTeamNames([e.target.value, ''])}
                                         placeholder="Enter team name"
@@ -537,15 +693,20 @@ const AddRoundModal = (props) => {
                             {selectedFormat === 'teams' && selectedPlayers.length === 4 && (
                                 <div className="team-config">
                                     <div className="team-setup">
-                                        <div className="team">
+                                        <div className="team-col">
                                             <input
                                                 type="text"
+                                                className="team-config__input"
                                                 value={teamNames[0]}
                                                 onChange={(e) => setTeamNames([e.target.value, teamNames[1]])}
                                                 placeholder="Team 1 name"
                                             />
                                             {selectedPlayers.map(player => (
-                                                <div key={player.id} className="player-assignment">
+                                                <label
+                                                    key={player.id}
+                                                    htmlFor={`player-${player.id}`}
+                                                    className={`team-pick ${playerAssignments[player.id] === 0 ? 'is-on' : ''}`}
+                                                >
                                                     <input
                                                         id={`player-${player.id}`}
                                                         type="radio"
@@ -559,22 +720,27 @@ const AddRoundModal = (props) => {
                                                             if (teamNames[0].length == 0) {
                                                                 setTeamNames([player.name + "'s team", teamNames[1]])
                                                             }
-
                                                         }}
                                                     />
-                                                    <label htmlFor={`player-${player.id}`}>{player.name}</label>
-                                                </div>
+                                                    <span className="team-pick__avatar">{getInitials(player.name)}</span>
+                                                    <span className="team-pick__name">{player.name}</span>
+                                                </label>
                                             ))}
                                         </div>
-                                        <div className="team">
+                                        <div className="team-col">
                                             <input
                                                 type="text"
+                                                className="team-config__input"
                                                 value={teamNames[1]}
                                                 onChange={(e) => setTeamNames([teamNames[0], e.target.value])}
                                                 placeholder="Team 2 name"
                                             />
                                             {selectedPlayers.map(player => (
-                                                <div key={player.id} className="player-assignment">
+                                                <label
+                                                    key={player.id}
+                                                    htmlFor={`player-2-${player.id}`}
+                                                    className={`team-pick ${playerAssignments[player.id] === 1 ? 'is-on' : ''}`}
+                                                >
                                                     <input
                                                         id={`player-2-${player.id}`}
                                                         type="radio"
@@ -590,8 +756,9 @@ const AddRoundModal = (props) => {
                                                             }
                                                         }}
                                                     />
-                                                    <label htmlFor={`player-2-${player.id}`}>{player.name}</label>
-                                                </div>
+                                                    <span className="team-pick__avatar">{getInitials(player.name)}</span>
+                                                    <span className="team-pick__name">{player.name}</span>
+                                                </label>
                                             ))}
                                         </div>
                                     </div>
@@ -600,20 +767,24 @@ const AddRoundModal = (props) => {
                         </div>
                     )}
 
-                    <div className="modal-actions">
+                    <div className="round-actions">
                         {currentStep > 1 && (
                             <button
                                 type="button"
-                                className="button-secondary"
+                                className="round-btn round-btn--ghost"
                                 onClick={handlePrevStep}
                             >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
                                 Back
                             </button>
                         )}
-                        {currentStep < 5 ? (
+                        {currentStep < lastStep ? (
                             <button
                                 type="button"
-                                className="button-primary min-100"
+                                className="round-btn round-btn--next"
                                 disabled={
                                     (currentStep === 1 && !isStep1Valid) ||
                                     (currentStep === 2 && !isStep2Valid) ||
@@ -623,11 +794,15 @@ const AddRoundModal = (props) => {
                                 onClick={handleNextStep}
                             >
                                 Next
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
                             </button>
                         ) : (
                             <button
                                 type="button"
-                                className="button-primary"
+                                className="round-btn round-btn--create"
                                 disabled={!isStep5Valid()}
                                 onClick={handleCreateRound}
                             >

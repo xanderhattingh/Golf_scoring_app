@@ -2,6 +2,7 @@ import "../../styles/Pages/login.scss"
 import "../../styles/Shared/shared.scss"
 
 import golfBg from "../../assets/golf-bg.jpg"
+import AuthCrest from "../../components/AuthCrest.tsx";
 import HttpService from "../../services/HttpService.ts";
 import StorageService from "../../services/StorageService.ts";
 
@@ -167,198 +168,196 @@ const Register = () => {
                 className="login-background"
                 style={{backgroundImage: `url(${golfBg})`}}
             />
-            <div className="login-container">
+            <div className="login-container register">
                 <div className="login-content">
-                    <div className="login-header">
-                        Golf Scoring
-                    </div>
-                    <div className="login-subtitle">
-                        {useInviteCode ? "Complete Your Registration" : "Create Your Account"}
-                    </div>
+                    <div className="auth-card">
+                        <div className="auth-crest">
+                            <AuthCrest/>
+                        </div>
+                        <div className="login-header">
+                            Golf <span>Scoring</span>
+                        </div>
+                        <div className="login-subtitle">
+                            {useInviteCode ? "Complete Registration" : "Join The Club"}
+                        </div>
 
-                    <div className="login-image">
-                        <div className="ball-ring"></div>
-                    </div>
+                        <form className="login-form" onSubmit={handleSubmit(onSubmit)} autoComplete="off">
+                            {/* Toggle to show if the user has an invite code */}
+                            <div className="toggle-wrapper">
+                                <span className="toggle-label">I have an invite code</span>
+                                <div
+                                    className={`toggle-switch ${useInviteCode ? 'active' : ''}`}
+                                    onClick={toggleInviteCode}
+                                    role="switch"
+                                    aria-checked={useInviteCode}
+                                >
+                                    <div className="toggle-knob"></div>
+                                </div>
+                            </div>
 
-                    <form className="login-form" onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-                        {/* Show invite code field and optional phone when toggle is on */}
+                            {useInviteCode && (
+                                <>
+                                    <div className="input-group">
+                                        <input
+                                            id="inviteCode"
+                                            type="text"
+                                            placeholder=" "
+                                            maxLength={6}
+                                            autoComplete="off"
+                                            {...register("inviteCode")}
+                                        />
+                                        <label htmlFor="inviteCode">Invite Code</label>
+                                        {errors.inviteCode && (
+                                            <span className="error-message">{errors.inviteCode.message}</span>
+                                        )}
+                                    </div>
+                                    <div className="input-group">
+                                        <input
+                                            id="phone"
+                                            type="tel"
+                                            placeholder=" "
+                                            autoComplete="off"
+                                            {...register("phone")}
+                                        />
+                                        <label htmlFor="phone">Phone Number</label>
+                                        {errors.phone && (
+                                            <span className="error-message">{errors.phone.message}</span>
+                                        )}
+                                    </div>
+                                </>
+                            )}
 
-                        {/* Toggle to show if the user has an invite code */}
-                        <div className="toggle-wrapper">
-                            <span className="toggle-label">I have an invite code</span>
-                            <div
-                                className={`toggle-switch ${useInviteCode ? 'active' : ''}`}
-                                onClick={toggleInviteCode}
-                                role="switch"
-                                aria-checked={useInviteCode}
+                            {/* Only show name/phone fields if NOT using invite code */}
+                            {!useInviteCode && (
+                                <>
+                                    <div className="input-group">
+                                        <input
+                                            id="name"
+                                            type="text"
+                                            placeholder=" "
+                                            autoComplete="off"
+                                            {...register("name")}
+                                        />
+                                        <label htmlFor="name">First Name</label>
+                                        {errors.name && (
+                                            <span className="error-message">{errors.name.message}</span>
+                                        )}
+                                    </div>
+
+                                    <div className="input-group">
+                                        <input
+                                            id="surname"
+                                            type="text"
+                                            placeholder=" "
+                                            autoComplete="off"
+                                            {...register("surname")}
+                                        />
+                                        <label htmlFor="surname">Surname</label>
+                                        {errors.surname && (
+                                            <span className="error-message">{errors.surname.message}</span>
+                                        )}
+                                    </div>
+
+                                    <div className="input-group">
+                                        <input
+                                            id="email"
+                                            type="email"
+                                            placeholder=" "
+                                            autoComplete="off"
+                                            {...register("email")}
+                                        />
+                                        <label htmlFor="email">Email Address</label>
+                                        {errors.email && (
+                                            <span className="error-message">{errors.email.message}</span>
+                                        )}
+                                    </div>
+
+                                    <div className="input-group">
+                                        <input
+                                            id="phone"
+                                            type="tel"
+                                            placeholder=" "
+                                            autoComplete="off"
+                                            {...register("phone")}
+                                        />
+                                        <label htmlFor="phone">Phone Number</label>
+                                        {errors.phone && (
+                                            <span className="error-message">{errors.phone.message}</span>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="input-group">
+                                <div className="password-input-wrapper">
+                                    <input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder=" "
+                                        autoComplete="new-password"
+                                        {...register("password")}
+                                    />
+                                    <label htmlFor="password">Password</label>
+                                    <button
+                                        type="button"
+                                        className="toggle-password"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        tabIndex={-1}
+                                    >
+                                        {showPassword ? "🙈" : "👁️"}
+                                    </button>
+                                </div>
+                                {errors.password && (
+                                    <span className="error-message">{errors.password.message}</span>
+                                )}
+                            </div>
+
+                            <div className="input-group">
+                                <div className="password-input-wrapper">
+                                    <input
+                                        id="confirmPassword"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        placeholder=" "
+                                        autoComplete="new-password"
+                                        {...register("confirmPassword")}
+                                    />
+                                    <label htmlFor="confirmPassword">Confirm Password</label>
+                                    <button
+                                        type="button"
+                                        className="toggle-password"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        tabIndex={-1}
+                                    >
+                                        {showConfirmPassword ? "🙈" : "👁️"}
+                                    </button>
+                                </div>
+                                {errors.confirmPassword && (
+                                    <span className="error-message">{errors.confirmPassword.message}</span>
+                                )}
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="login-button"
+                                disabled={isLoading}
                             >
-                                <div className="toggle-knob"></div>
-                            </div>
+                                {isLoading
+                                    ? (useInviteCode ? "Completing Registration..." : "Creating Account...")
+                                    : (useInviteCode ? "Complete Registration" : "Create Account")
+                                }
+                            </button>
+                        </form>
+
+                        <div className="no-account">
+                            Already have an account?{" "}
+                            <Link to="/login">Sign In</Link>
                         </div>
-
-
-                        {useInviteCode && (
-                            <>
-                                <div className="input-group">
-                                    <label htmlFor="inviteCode">Invite Code</label>
-                                    <input
-                                        id="inviteCode"
-                                        type="text"
-                                        placeholder="Enter 6-digit invite code"
-                                        maxLength={6}
-                                        autoComplete="off"
-                                        {...register("inviteCode")}
-                                    />
-                                    {errors.inviteCode && (
-                                        <span className="error-message">{errors.inviteCode.message}</span>
-                                    )}
-                                </div>
-                                <div className="input-group">
-                                    <label htmlFor="phone">Phone Number *</label>
-                                    <input
-                                        id="phone"
-                                        type="tel"
-                                        placeholder="Enter your phone number"
-                                        autoComplete="off"
-                                        {...register("phone")}
-                                    />
-                                    {errors.phone && (
-                                        <span className="error-message">{errors.phone.message}</span>
-                                    )}
-                                </div>
-                            </>
-                        )}
-
-                        {/* Only show name/phone fields if NOT using invite code */}
-                        {!useInviteCode && (
-                            <>
-                                <div className="input-group">
-                                    <label htmlFor="name">First Name</label>
-                                    <input
-                                        id="name"
-                                        type="text"
-                                        placeholder="Enter your first name"
-                                        autoComplete="off"
-                                        {...register("name")}
-                                    />
-                                    {errors.name && (
-                                        <span className="error-message">{errors.name.message}</span>
-                                    )}
-                                </div>
-
-                                <div className="input-group">
-                                    <label htmlFor="surname">Surname</label>
-                                    <input
-                                        id="surname"
-                                        type="text"
-                                        placeholder="Enter your surname"
-                                        autoComplete="off"
-                                        {...register("surname")}
-                                    />
-                                    {errors.surname && (
-                                        <span className="error-message">{errors.surname.message}</span>
-                                    )}
-                                </div>
-
-                                <div className="input-group">
-                                    <label htmlFor="email">Email Address</label>
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        placeholder="Enter your email address"
-                                        autoComplete="off"
-                                        {...register("email")}
-                                    />
-                                    {errors.email && (
-                                        <span className="error-message">{errors.email.message}</span>
-                                    )}
-                                </div>
-
-                                <div className="input-group">
-                                    <label htmlFor="phone">Phone Number</label>
-                                    <input
-                                        id="phone"
-                                        type="tel"
-                                        placeholder="Enter your phone number"
-                                        autoComplete="off"
-                                        {...register("phone")}
-                                    />
-                                    {errors.phone && (
-                                        <span className="error-message">{errors.phone.message}</span>
-                                    )}
-                                </div>
-                            </>
-                        )}
-
-                        <div className="input-group">
-                            <label htmlFor="password">Password</label>
-                            <div className="password-input-wrapper">
-                                <input
-                                    id="password"
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="Create a password"
-                                    autoComplete="new-password"
-                                    {...register("password")}
-                                />
-                                <button
-                                    type="button"
-                                    className="toggle-password"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    tabIndex={-1}
-                                >
-                                    {showPassword ? "🙈" : "👁️"}
-                                </button>
-                            </div>
-                            {errors.password && (
-                                <span className="error-message">{errors.password.message}</span>
-                            )}
-                        </div>
-
-                        <div className="input-group">
-                            <label htmlFor="confirmPassword">Confirm Password</label>
-                            <div className="password-input-wrapper">
-                                <input
-                                    id="confirmPassword"
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    placeholder="Confirm your password"
-                                    autoComplete="new-password"
-                                    {...register("confirmPassword")}
-                                />
-                                <button
-                                    type="button"
-                                    className="toggle-password"
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    tabIndex={-1}
-                                >
-                                    {showConfirmPassword ? "🙈" : "👁️"}
-                                </button>
-                            </div>
-                            {errors.confirmPassword && (
-                                <span className="error-message">{errors.confirmPassword.message}</span>
-                            )}
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="login-button"
-                            disabled={isLoading}
-                        >
-                            {isLoading
-                                ? (useInviteCode ? "Completing Registration..." : "Creating Account...")
-                                : (useInviteCode ? "Complete Registration" : "Create Account")
-                            }
-                        </button>
-                    </form>
-
-                    <div className="no-account">
-                        Already have an account?{" "}
-                        <Link to="/login">Sign In</Link>
                     </div>
-                </div>
 
-                <div className="login-footer">
-                    <div className="golf-quote">"The most important shot in golf is the next one."</div>
-                    <div>— Ben Hogan</div>
+                    <div className="login-footer">
+                        <div className="golf-quote">"The most important shot in golf is the next one."</div>
+                        <div>— Ben Hogan</div>
+                    </div>
                 </div>
             </div>
         </div>

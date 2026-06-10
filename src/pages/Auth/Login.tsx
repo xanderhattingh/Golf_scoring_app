@@ -2,6 +2,7 @@ import "../../styles/Pages/login.scss"
 import "../../styles/Shared/shared.scss"
 
 import golfBg from "../../assets/golf-bg.jpg"
+import AuthCrest from "../../components/AuthCrest.tsx";
 import HttpService from "../../services/HttpService.ts";
 import StorageService from "../../services/StorageService.ts";
 
@@ -79,74 +80,75 @@ const Login = () => {
             />
             <div className="login-container">
                 <div className="login-content">
-                    <div className="login-header">
-                        Golf Scoring
-                    </div>
-                    <div className="login-subtitle">
-                        Track. Compete. Improve.
-                    </div>
-
-                    <div className="login-image">
-                        <div className="ball-ring"></div>
-                    </div>
-
-                    <form className="login-form" onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-                        <div className="input-group">
-                            <label htmlFor="phone">Phone Number</label>
-                            <input
-                                id="phone"
-                                type="tel"
-                                placeholder="Enter your phone number"
-                                autoComplete="off"
-                                {...register("phone")}
-                            />
-                            {errors.phone && (
-                                <span className="error-message">{errors.phone.message}</span>
-                            )}
+                    <div className="auth-card">
+                        <div className="auth-crest">
+                            <AuthCrest />
+                        </div>
+                        <div className="login-header">
+                            Golf <span>Scoring</span>
+                        </div>
+                        <div className="login-subtitle">
+                            Track · Compete · Improve
                         </div>
 
-                        <div className="input-group">
-                            <label htmlFor="password">Password</label>
-                            <div className="password-input-wrapper">
+                        <form className="login-form" onSubmit={handleSubmit(onSubmit)} autoComplete="off">
+                            <div className="input-group">
                                 <input
-                                    id="password"
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="Enter your password"
-                                    autoComplete="new-password"
-                                    {...register("password")}
+                                    id="phone"
+                                    type="tel"
+                                    placeholder=" "
+                                    autoComplete="off"
+                                    {...register("phone")}
                                 />
-                                <button
-                                    type="button"
-                                    className="toggle-password"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    tabIndex={-1}
-                                >
-                                    {showPassword ? "🙈" : "👁️"}
-                                </button>
+                                <label htmlFor="phone">Phone Number</label>
+                                {errors.phone && (
+                                    <span className="error-message">{errors.phone.message}</span>
+                                )}
                             </div>
-                            {errors.password && (
-                                <span className="error-message">{errors.password.message}</span>
-                            )}
+
+                            <div className="input-group">
+                                <div className="password-input-wrapper">
+                                    <input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder=" "
+                                        autoComplete="new-password"
+                                        {...register("password")}
+                                    />
+                                    <label htmlFor="password">Password</label>
+                                    <button
+                                        type="button"
+                                        className="toggle-password"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        tabIndex={-1}
+                                    >
+                                        {showPassword ? "🙈" : "👁️"}
+                                    </button>
+                                </div>
+                                {errors.password && (
+                                    <span className="error-message">{errors.password.message}</span>
+                                )}
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="login-button"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? "Signing In..." : "Sign In"}
+                            </button>
+                        </form>
+
+                        <div className="no-account">
+                            Don't have an account?{" "}
+                            <Link to="/register">Register</Link>
                         </div>
-
-                        <button
-                            type="submit"
-                            className="login-button"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? "Signing In..." : "Sign In"}
-                        </button>
-                    </form>
-
-                    <div className="no-account">
-                        Don't have an account?{" "}
-                        <Link to="/register">Register</Link>
                     </div>
-                </div>
 
-                <div className="login-footer">
-                    <div className="golf-quote">"The most important shot in golf is the next one."</div>
-                    <div>— Ben Hogan</div>
+                    <div className="login-footer">
+                        <div className="golf-quote">"The most important shot in golf is the next one."</div>
+                        <div>— Ben Hogan</div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -11,6 +11,7 @@ import HttpService from "../../../services/HttpService.ts";
 import "../../../styles/Pages/Rounds.scss"
 import "../../../styles/Shared/backgrounds.scss"
 import AddRoundModal from "../../../components/AddRoundModal.tsx";
+import AuthCrest from "../../../components/AuthCrest.tsx";
 import golfBg from "../../../assets/golf-bg-4.jpg";
 
 const Rounds = () => {
@@ -80,6 +81,16 @@ const Rounds = () => {
             month: 'short',
             day: 'numeric'
         });
+    }
+
+    const getInitials = (name: string): string => {
+        return (name || '')
+            .split(' ')
+            .filter(Boolean)
+            .map((part) => part.charAt(0))
+            .slice(0, 2)
+            .join('')
+            .toUpperCase() || '?';
     }
 
     const handleExportRound = async (round: Round) => {
@@ -173,7 +184,7 @@ const Rounds = () => {
             head: [summaryHeaders],
             body: summaryData,
             theme: 'striped',
-            headStyles: {fillColor: [59, 130, 246]},
+            headStyles: {fillColor: [45, 90, 39]},
             margin: {left: 14, right: 14}
         });
 
@@ -373,7 +384,7 @@ const Rounds = () => {
             head: [front9.headers],
             body: front9.body,
             theme: 'grid',
-            headStyles: {fillColor: [59, 130, 246], fontSize: 8, halign: 'center'},
+            headStyles: {fillColor: [45, 90, 39], fontSize: 8, halign: 'center'},
             bodyStyles: {fontSize: 8, halign: 'center'},
             columnStyles: {0: {halign: 'left', fontStyle: 'bold'}},
             margin: {left: 14, right: 14},
@@ -400,7 +411,7 @@ const Rounds = () => {
             head: [back9.headers],
             body: back9.body,
             theme: 'grid',
-            headStyles: {fillColor: [59, 130, 246], fontSize: 8, halign: 'center'},
+            headStyles: {fillColor: [45, 90, 39], fontSize: 8, halign: 'center'},
             bodyStyles: {fontSize: 8, halign: 'center'},
             columnStyles: {0: {halign: 'left', fontStyle: 'bold'}},
             margin: {left: 14, right: 14},
@@ -457,99 +468,139 @@ const Rounds = () => {
             />
             <div className="page-content">
                 <div className="rounds-container">
-                    <div className="page-header-glass">
-                        <h1>🏆 Rounds</h1>
-                        <span className="count-badge">{rounds.length} round{rounds.length !== 1 ? 's' : ''}</span>
-                    </div>
+                    <header className="clubhouse-header">
+                        <div className="clubhouse-header__crest">
+                            <AuthCrest />
+                        </div>
+                        <div className="clubhouse-header__titles">
+                            <h1>Rounds</h1>
+                            <span className="clubhouse-header__sub">
+                                {rounds.length} round{rounds.length !== 1 ? 's' : ''} on the card
+                            </span>
+                        </div>
+                    </header>
 
-                    <div className="action-bar">
-                        <button className="button-primary" onClick={handleAddRoundClick}>
-                            <span style={{marginRight: '8px'}}>➕</span> Create Round
+                    <div className="rounds-toolbar">
+                        <button className="btn-round btn-round--add" onClick={handleAddRoundClick}>
+                            <span className="btn-round__plus">+</span> Create Round
                         </button>
                     </div>
 
                     {rounds.length === 0 ? (
-                        <div className="empty-state-glass">
-                            <div className="empty-icon">🏆</div>
-                            <h3>No Rounds Yet</h3>
-                            <p>Create your first round to start scoring</p>
+                        <div className="rounds-empty">
+                            <div className="rounds-empty__crest">
+                                <AuthCrest />
+                            </div>
+                            <h3>No rounds yet</h3>
+                            <p>Tee off your first round to start keeping score.</p>
+                            <button className="btn-round btn-round--add" onClick={handleAddRoundClick}>
+                                <span className="btn-round__plus">+</span> Create Round
+                            </button>
                         </div>
                     ) : (
                         <div className="rounds-grid">
-                            {rounds.map((round) => (
-                                <div key={round.id}
-                                     className={`round-card glass-card ${round.completed ? 'completed' : 'in-progress'}`}>
-                                    <div className="card-header">
-                                        <div className="course-info">
-                                            <div className="course-name">{round.course.name}</div>
-                                            <div className="round-meta">
-                                                <span className="meta-item date">{formatDate(round.date)}</span>
-                                                <span
-                                                    className="meta-item scoring-method">{round.scoring_method.name}</span>
+                            {rounds.map((round) => {
+                                const holesPlayed = round.scores?.length || round.scores_count || 0;
+                                const pct = Math.min(100, Math.round((holesPlayed / 18) * 100));
+                                const players = round.players || [];
+                                return (
+                                    <article key={round.id}
+                                             className={`round-card ${round.completed ? 'round-card--done' : 'round-card--active'}`}>
+                                        <div className="round-card__top">
+                                            <div className="round-card__head">
+                                                <h2>{round.course.name}</h2>
+                                                <div className="round-card__sub">
+                                                    <span className="round-card__date">{formatDate(round.date)}</span>
+                                                    <span className="round-card__method">{round.scoring_method.name}</span>
+                                                    {round.format === 'teams' && (
+                                                        <span className="round-card__format">Teams</span>
+                                                    )}
+                                                </div>
                                             </div>
+                                            <span className={`round-status ${round.completed ? 'round-status--done' : 'round-status--active'}`}>
+                                                {round.completed ? 'Completed' : 'In Progress'}
+                                            </span>
                                         </div>
-                                        <div className="status-section">
-                                        <span
-                                            className={`status-badge ${round.completed ? 'completed' : 'in-progress'}`}>
-                                            {round.completed ? 'Completed' : 'In Progress'}
-                                        </span>
-                                            {(round.scores?.length > 0 || round.scores_count > 0) && (
-                                                <span className="hole-progress">{round.scores?.length || round.scores_count || 0}/18</span>
+
+                                        {players.length > 0 && (
+                                            <div className="round-card__players">
+                                                <div className="round-card__avatars">
+                                                    {players.slice(0, 4).map((p) => (
+                                                        <span key={p.id} className="round-avatar" title={p.name}>
+                                                            {getInitials(p.name)}
+                                                        </span>
+                                                    ))}
+                                                    {players.length > 4 && (
+                                                        <span className="round-avatar round-avatar--more">
+                                                            +{players.length - 4}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="round-card__pcount">
+                                                    {players.length} player{players.length !== 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        <div className="round-card__progress">
+                                            <div className="round-card__bar">
+                                                <span style={{width: `${pct}%`}} />
+                                            </div>
+                                            <span className="round-card__holes">{holesPlayed}/18</span>
+                                        </div>
+
+                                        <div className="round-card__actions">
+                                            {round.completed ? (
+                                                <>
+                                                    <button className="round-card__btn round-card__btn--primary"
+                                                            onClick={() => handleViewRoundClick(round)}
+                                                            title="View round">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                            <circle cx="12" cy="12" r="3"></circle>
+                                                        </svg>
+                                                        View
+                                                    </button>
+                                                    <button className="round-card__btn round-card__btn--gold"
+                                                            onClick={() => handleExportRound(round)}
+                                                            title="Export to PDF">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                            <polyline points="7 10 12 15 17 10"></polyline>
+                                                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                                                        </svg>
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button className="round-card__btn round-card__btn--primary"
+                                                        onClick={() => handleEditRoundClick(round)}
+                                                        title="Continue round">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                    </svg>
+                                                    Continue
+                                                </button>
                                             )}
-                                        </div>
-                                    </div>
-                                    <div className="card-actions">
-                                        {round.completed ? (
-                                            <>
-                                                <button className="action-btn view"
-                                                        onClick={() => handleViewRoundClick(round)}
-                                                        title="View round">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                        <circle cx="12" cy="12" r="3"></circle>
-                                                    </svg>
-                                                </button>
-                                                <button className="action-btn export"
-                                                        onClick={() => handleExportRound(round)}
-                                                        title="Export to PDF">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                                        <polyline points="7 10 12 15 17 10"></polyline>
-                                                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                                                    </svg>
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <button className="action-btn play"
-                                                    onClick={() => handleEditRoundClick(round)}
-                                                    title="Continue round">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                            <button className="round-card__btn round-card__btn--danger"
+                                                    onClick={() => handleDeleteClick(round)}
+                                                    title="Delete round">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                                     strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                                 </svg>
                                             </button>
-                                        )}
-                                        <button className="action-btn danger"
-                                                onClick={() => handleDeleteClick(round)}
-                                                title="Delete round">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                                                 strokeLinecap="round" strokeLinejoin="round">
-                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                <path
-                                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                                        </div>
+                                    </article>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

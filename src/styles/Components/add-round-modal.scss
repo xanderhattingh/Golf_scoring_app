@@ -1,448 +1,746 @@
 @use "modal.scss";
 
-// Mobile-optimized round creation modal
-$bg-input: #232f3e;
-$accent-blue: #3b82f6;
-$accent-green: #10b981;
-$text-primary: #f8fafc;
-$text-secondary: #94a3b8;
-$text-muted: #64748b;
+// ============================================================================
+// CREATE ROUND WIZARD — Clubhouse language
+// 5-step flow: Course → Players → Handicap → Scoring → Format
+// ============================================================================
 
-.add-round-modal {
+$fairway:      #2d5a27;
+$forest:       #0d2818;
+$light-green:  #4a7c43;
+$pale-green:   #7ba872;
+$gold:         #d4af37;
+$gold-bright:  #f4d489;
+$cream:        #f4efe2;
+$cream-dim:    rgba(244, 239, 226, 0.62);
+$cream-faint:  rgba(244, 239, 226, 0.34);
+$green-go:     #8fe39a;
+
+$font-display: 'Fraunces', Georgia, serif;
+$font-ui:      'Quicksand', -apple-system, sans-serif;
+$font-mono:    'JetBrains Mono', 'SF Mono', monospace;
+
+.round-wizard {
   width: 100%;
+  --crest-gold: #{$gold};
 
-  .step-indicator {
+  // -------------------------------------------------------------------------
+  // Header
+  // -------------------------------------------------------------------------
+  &__header {
     display: flex;
-    justify-content: center;
-    gap: 2px;
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
 
-    .step {
-      font-size: 13px;
-      color: $text-muted;
-      padding: 8px 14px;
-      border-radius: 20px;
-      font-weight: 500;
-      transition: all 0.15s ease;
+  &__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
 
-      &.active {
-        color: $text-primary;
-        background-color: rgba($accent-blue, 0.2);
+  &__title {
+    font-family: $font-display;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+    color: $cream;
+  }
+
+  &__step {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: $gold;
+  }
+
+  // -------------------------------------------------------------------------
+  // Stepper
+  // -------------------------------------------------------------------------
+  .round-stepper {
+    display: flex;
+    margin-bottom: 22px;
+    padding-bottom: 4px;
+  }
+
+  .round-step {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+
+    // connector line into this step — stops at the circle edges (dot is 27px → ~13.5px radius + gap)
+    &:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      top: 12.5px;
+      right: calc(50% + 18px);
+      left: calc(-50% + 18px);
+      height: 2px;
+      background: rgba(123, 168, 114, 0.25);
+      z-index: 0;
+    }
+    &.is-done::before,
+    &.is-active::before {
+      background: linear-gradient(90deg, $gold, $gold-bright);
+    }
+
+    &__dot {
+      position: relative;
+      z-index: 1;
+      width: 27px;
+      height: 27px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.2s ease;
+
+      svg { width: 14px; height: 14px; }
+    }
+
+    &__label {
+      font-family: $font-ui;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: color 0.2s ease;
+    }
+
+    &.is-upcoming {
+      .round-step__dot {
+        background: rgba(6, 18, 11, 0.6);
+        border: 1px solid rgba(123, 168, 114, 0.3);
+        color: $cream-faint;
       }
+      .round-step__label { color: $cream-faint; }
+    }
 
-      &.completed {
-        color: $accent-green;
+    &.is-active {
+      .round-step__dot {
+        background: rgba(212, 175, 55, 0.16);
+        border: 1.5px solid $gold;
+        color: $gold-bright;
+        box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1);
       }
+      .round-step__label { color: $gold; }
+    }
+
+    &.is-done {
+      .round-step__dot {
+        background: linear-gradient(135deg, $gold-bright, $gold);
+        border: 1.5px solid $gold;
+        color: $forest;
+      }
+      .round-step__label { color: $cream-dim; }
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Step content shell
+  // -------------------------------------------------------------------------
   .step-content {
-    min-height: 280px;
+    min-height: 290px;
     display: flex;
     flex-direction: column;
   }
 
-  .search-container {
-    margin-bottom: 16px;
+  .step-hint {
+    margin: 0 0 16px;
+    font-family: $font-ui;
+    font-size: 13.5px;
+    color: $cream-dim;
 
-    .search-input {
+    strong { color: $gold-bright; font-weight: 700; }
+  }
+
+  // -------------------------------------------------------------------------
+  // Search
+  // -------------------------------------------------------------------------
+  .round-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 14px;
+
+    &__icon {
+      position: absolute;
+      left: 14px;
+      color: $cream-faint;
+      pointer-events: none;
+    }
+
+    input {
       width: 100%;
-      min-height: 52px;
-      padding: 14px 16px;
-      border: 2px solid rgba(255, 255, 255, 0.1);
+      height: 50px;
+      padding: 0 16px 0 40px;
       border-radius: 12px;
-      background-color: $bg-input;
-      color: $text-primary;
-      font-size: 16px;
+      border: 1px solid rgba(123, 168, 114, 0.22);
+      background: rgba(6, 18, 11, 0.5);
+      color: $cream;
+      font-family: $font-ui;
+      font-size: 15px;
       box-sizing: border-box;
+      transition: all 0.18s ease;
 
-      &::placeholder {
-        color: $text-muted;
-      }
+      &::placeholder { color: $cream-faint; }
 
       &:focus {
         outline: none;
-        border-color: $accent-blue;
+        border-color: $gold;
+        background: rgba(6, 18, 11, 0.7);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.13);
       }
     }
   }
 
-  .selected-info {
-    color: $text-secondary;
-    font-size: 14px;
+  // -------------------------------------------------------------------------
+  // Selection lists / cards
+  // -------------------------------------------------------------------------
+  .select-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     margin-bottom: 12px;
-  }
 
-  .selection-list {
-    margin-top: 8px;
-    flex: 1;
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    margin-bottom: 16px;
-    -webkit-overflow-scrolling: touch;
-
-    .selection-item {
-      padding: 16px;
-      color: $text-primary;
-      cursor: pointer;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      min-height: 56px;
-      -webkit-tap-highlight-color: transparent;
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      &:active {
-        background-color: rgba(255, 255, 255, 0.05);
-      }
-
-      &.selected {
-        background-color: rgba($accent-blue, 0.15);
-        border-left: 3px solid $accent-blue;
-      }
-
-      .player-info-row {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-
-        .player-name {
-          font-size: 16px;
-          font-weight: 500;
-        }
-
-        .player-phone {
-          font-size: 13px;
-          color: $text-muted;
-        }
-      }
-
-      .handicap-badge {
-        font-size: 13px;
-        color: $text-secondary;
-        background-color: rgba(255, 255, 255, 0.08);
-        padding: 6px 10px;
-        border-radius: 8px;
-        font-weight: 500;
-        flex-shrink: 0;
-      }
-    }
-
-    .section-header {
-      padding: 10px 16px;
+    &__count {
+      font-family: $font-ui;
       font-size: 12px;
       font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: $text-muted;
-      background-color: rgba(255, 255, 255, 0.03);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      color: $gold;
     }
 
-    .no-results {
-      padding: 32px;
-      text-align: center;
-      color: $text-muted;
-    }
-  }
-
-  .add-new-button {
-    width: 100%;
-    margin-top: auto;
-  }
-
-  .handicap-info {
-    margin-bottom: 16px;
-    color: $text-secondary;
-
-    p {
-      margin: 0;
-      font-size: 14px;
-    }
-
-    strong {
-      color: $accent-blue;
-    }
-  }
-
-  .handicap-list {
-    flex: 1;
-
-    .handicap-item {
+    &__avatars {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      .player-name {
-        color: $text-primary;
-        font-size: 16px;
-        font-weight: 500;
-      }
-
-      .handicap-input {
-        width: 80px;
-        height: 52px;
-        padding: 0;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        background-color: $bg-input;
-        color: $text-primary;
-        font-size: 20px;
-        font-weight: 600;
-        text-align: center;
-
-        &:focus {
-          outline: none;
-          border-color: $accent-blue;
-        }
-
-        &::-webkit-inner-spin-button,
-        &::-webkit-outer-spin-button {
-          -webkit-appearance: none;
-        }
-      }
+      .player-avatar { margin-left: -8px; &:first-child { margin-left: 0; } }
     }
   }
 
-  .scoring-info {
-    margin-bottom: 16px;
-    color: $text-secondary;
-
-    p {
-      margin: 0;
-      font-size: 14px;
-    }
-  }
-
-  .scoring-method-list {
+  .select-list {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-
-    .scoring-method-item {
-      gap: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 18px;
-      border: 2px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      margin-bottom: 12px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      -webkit-tap-highlight-color: transparent;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-
-      &:active {
-        background-color: rgba(255, 255, 255, 0.05);
-      }
-
-      &.selected {
-        background-color: rgba($accent-blue, 0.12);
-        border-color: $accent-blue;
-      }
-
-      .method-info {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-
-        .method-name {
-          color: $text-primary;
-          font-size: 16px;
-          font-weight: 600;
-        }
-
-        .method-description {
-          color: $text-muted;
-          font-size: 13px;
-        }
-      }
-
-      .toggle {
-        min-width: 52px;
-        width: 52px;
-        height: 30px;
-        background-color: rgba(255, 255, 255, 0.15);
-        border-radius: 15px;
-        position: relative;
-        transition: background-color 0.2s ease;
-
-        &.active {
-          background-color: $accent-blue;
-        }
-
-        .toggle-knob {
-          width: 26px;
-          height: 26px;
-          background-color: white;
-          border-radius: 50%;
-          position: absolute;
-          top: 2px;
-          left: 2px;
-          transition: transform 0.2s ease;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        &.active .toggle-knob {
-          transform: translateX(22px);
-        }
-      }
-    }
-  }
-
-  .modal-actions {
+    margin-bottom: 14px;
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 175, 55, 0.3) transparent;
+
+    &::-webkit-scrollbar { width: 5px; }
+    &::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 3px; }
+
+    &__header {
+      font-family: $font-ui;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: $gold;
+      padding: 8px 2px 2px;
+    }
+  }
+
+  // generic selectable card (course / player / method / format)
+  .select-card,
+  .method-card,
+  .format-card {
+    display: flex;
+    align-items: center;
     gap: 12px;
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    width: 100%;
+    text-align: left;
+    padding: 13px 14px;
+    border-radius: 13px;
+    border: 1px solid rgba(123, 168, 114, 0.2);
+    background: rgba(6, 18, 11, 0.4);
+    color: $cream;
+    cursor: pointer;
+    transition: all 0.16s ease;
+    -webkit-tap-highlight-color: transparent;
 
-    button {
+    &:hover { border-color: rgba(212, 175, 55, 0.35); background: rgba(6, 18, 11, 0.6); }
+
+    &.is-selected {
+      border-color: $gold;
+      background: rgba(212, 175, 55, 0.1);
+      box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.3) inset;
+
+      .select-card__check { opacity: 1; transform: scale(1); }
+    }
+
+    &__main {
       flex: 1;
-    }
-
-    @media screen and (max-width: 400px) {
-      flex-direction: column-reverse;
-    }
-  }
-
-  .format-info {
-    margin-bottom: 16px;
-    color: $text-secondary;
-
-    p {
-      margin: 0;
-      font-size: 14px;
-    }
-  }
-
-  .format-options {
-    margin-bottom: 24px;
-
-    .format-option {
-      padding: 18px;
-      border: 2px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      margin-bottom: 12px;
-      cursor: pointer;
+      min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      transition: all 0.15s ease;
+      gap: 2px;
+    }
+
+    &__title {
+      font-family: $font-display;
+      font-optical-sizing: auto;
+      font-weight: 600;
+      font-size: 16px;
+      color: $cream;
+      line-height: 1.2;
+    }
+
+    &__sub {
+      font-family: $font-ui;
+      font-size: 12px;
+      color: $cream-dim;
+    }
+
+    &__check {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, $gold-bright, $gold);
+      color: $forest;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+      svg { width: 14px; height: 14px; }
+    }
+  }
+
+  // shared player monogram avatar
+  .player-avatar {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: $font-mono;
+    font-weight: 600;
+    font-size: 13px;
+    color: $gold-bright;
+    background: radial-gradient(circle at 30% 30%, rgba(45, 90, 39, 0.85), rgba(9, 26, 16, 0.95));
+    border: 1.5px solid rgba(212, 175, 55, 0.45);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  }
+
+  // handicap chip on player rows
+  .round-hcp {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 9px;
+    background: rgba(6, 18, 11, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+
+    b { font-family: $font-mono; font-weight: 600; font-size: 15px; color: $cream; }
+    i { font-family: $font-ui; font-style: normal; font-size: 8px; font-weight: 700; letter-spacing: 0.1em; color: $gold; margin-top: 2px; }
+  }
+
+  .no-results {
+    padding: 36px;
+    text-align: center;
+    font-family: $font-ui;
+    color: $cream-faint;
+  }
+
+  // -------------------------------------------------------------------------
+  // Add-new button
+  // -------------------------------------------------------------------------
+  .round-add-btn {
+    width: 100%;
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px dashed rgba(212, 175, 55, 0.4);
+    background: rgba(212, 175, 55, 0.06);
+    color: $gold-bright;
+    font-family: $font-ui;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.18s ease;
+
+    &__plus { font-size: 17px; line-height: 0; }
+
+    &:hover { background: rgba(212, 175, 55, 0.12); border-color: $gold; }
+  }
+
+  // -------------------------------------------------------------------------
+  // Tee picker
+  // -------------------------------------------------------------------------
+  .tee-picker {
+    margin-top: 18px;
+
+    &__label {
+      font-family: $font-ui;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: $gold;
+      margin-bottom: 10px;
+    }
+  }
+
+  .tee-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .tee-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 100px;
+      border: 1px solid rgba(123, 168, 114, 0.25);
+      background: rgba(6, 18, 11, 0.45);
+      color: $cream-dim;
+      font-family: $font-ui;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.16s ease;
       -webkit-tap-highlight-color: transparent;
 
-      &:active {
-        background-color: rgba(255, 255, 255, 0.05);
+      &__dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(244, 239, 226, 0.85);
       }
 
-      &.selected {
-        background-color: rgba($accent-blue, 0.12);
-        border-color: $accent-blue;
-      }
+      &:hover { border-color: rgba(212, 175, 55, 0.4); color: $cream; }
 
-      .format-name {
-        color: $text-primary;
-        font-size: 16px;
-        font-weight: 600;
+      &.is-selected {
+        border-color: $gold;
+        background: rgba(212, 175, 55, 0.14);
+        color: $cream;
+        box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.3) inset;
       }
+    }
+  }
 
-      .format-description {
-        color: $text-muted;
-        font-size: 13px;
-      }
+  // -------------------------------------------------------------------------
+  // Handicap step
+  // -------------------------------------------------------------------------
+  .hcp-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hcp-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 13px;
+    border: 1px solid rgba(123, 168, 114, 0.18);
+    background: rgba(6, 18, 11, 0.4);
+
+    &__name {
+      flex: 1;
+      min-width: 0;
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 16px;
+      color: $cream;
+    }
+  }
+
+  .hcp-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+
+    &__btn {
+      width: 38px;
+      height: 44px;
+      border: none;
+      background: rgba(212, 175, 55, 0.1);
+      color: $gold-bright;
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+
+      &:hover:not(:disabled) { background: rgba(212, 175, 55, 0.22); }
+      &:disabled { opacity: 0.3; cursor: not-allowed; }
+    }
+
+    &__value {
+      width: 48px;
+      height: 44px;
+      border: none;
+      border-left: 1px solid rgba(212, 175, 55, 0.2);
+      border-right: 1px solid rgba(212, 175, 55, 0.2);
+      background: rgba(6, 18, 11, 0.5);
+      color: $cream;
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 18px;
+      text-align: center;
+      -moz-appearance: textfield;
+
+      &:focus { outline: none; background: rgba(6, 18, 11, 0.7); }
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Scoring method cards
+  // -------------------------------------------------------------------------
+  .method-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 175, 55, 0.3) transparent;
+
+    &::-webkit-scrollbar { width: 5px; }
+    &::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 3px; }
+  }
+
+  .method-card {
+    padding: 15px 16px;
+
+    &__main { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+    &__name {
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 16px;
+      color: $cream;
+    }
+
+    &__desc {
+      font-family: $font-ui;
+      font-size: 12.5px;
+      color: $cream-dim;
+      line-height: 1.35;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Format step
+  // -------------------------------------------------------------------------
+  .format-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .format-card {
+    padding: 16px;
+
+    &__main { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+
+    &__name {
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 16px;
+      color: $cream;
+    }
+
+    &__desc {
+      font-family: $font-ui;
+      font-size: 12.5px;
+      color: $cream-dim;
     }
   }
 
   .team-config {
-    label {
-      display: block;
-      color: $text-secondary;
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: 500;
+    &__label {
+      font-family: $font-ui;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      color: $gold;
+      margin-bottom: 10px;
     }
 
-    input[type="text"] {
+    &__input {
       width: 100%;
-      min-height: 52px;
-      padding: 14px 16px;
-      border: 2px solid rgba(255, 255, 255, 0.1);
+      height: 50px;
+      padding: 0 16px;
       border-radius: 12px;
-      background-color: $bg-input;
-      color: $text-primary;
-      font-size: 16px;
-      margin-bottom: 16px;
+      border: 1px solid rgba(123, 168, 114, 0.22);
+      background: rgba(6, 18, 11, 0.5);
+      color: $cream;
+      font-family: $font-ui;
+      font-size: 15px;
       box-sizing: border-box;
+      margin-bottom: 12px;
+      transition: all 0.18s ease;
 
-      &::placeholder {
-        color: $text-muted;
-      }
-
+      &::placeholder { color: $cream-faint; }
       &:focus {
         outline: none;
-        border-color: $accent-blue;
+        border-color: $gold;
+        background: rgba(6, 18, 11, 0.7);
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.13);
       }
     }
+  }
 
-    .team-setup {
+  .team-setup {
+    display: flex;
+    gap: 12px;
+
+    @media screen and (max-width: 500px) { flex-direction: column; }
+
+    .team-col {
+      flex: 1;
+      padding: 14px;
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: 14px;
+      background: rgba(6, 18, 11, 0.35);
+    }
+  }
+
+  .team-pick {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+
+    &__avatar {
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
       display: flex;
-      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 11px;
+      color: $cream-dim;
+      background: rgba(6, 18, 11, 0.6);
+      border: 1.5px solid rgba(123, 168, 114, 0.3);
+      transition: all 0.16s ease;
+    }
 
-      @media screen and (max-width: 500px) {
-        flex-direction: column;
+    &__name {
+      font-family: $font-ui;
+      font-size: 14px;
+      color: $cream-dim;
+    }
+
+    &.is-on {
+      background: rgba(212, 175, 55, 0.1);
+      .team-pick__avatar { color: $gold-bright; border-color: $gold; }
+      .team-pick__name { color: $cream; font-weight: 600; }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Footer actions
+  // -------------------------------------------------------------------------
+  .round-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px dashed rgba(212, 175, 55, 0.22);
+  }
+
+  .round-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 52px;
+    border-radius: 12px;
+    font-family: $font-ui;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+
+    svg { width: 16px; height: 16px; }
+
+    &--ghost {
+      padding: 0 20px;
+      color: $cream-dim;
+      background: rgba(6, 18, 11, 0.4);
+      border: 1px solid rgba(123, 168, 114, 0.25);
+
+      &:hover { color: $cream; border-color: rgba(212, 175, 55, 0.4); }
+    }
+
+    &--next,
+    &--create {
+      flex: 1;
+      color: $cream;
+      background: linear-gradient(135deg, $light-green 0%, $fairway 50%, $forest 100%);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(244, 239, 226, 0.15) inset;
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 175, 55, 0.55);
       }
+      &:active:not(:disabled) { transform: translateY(0); }
+      &:disabled { opacity: 0.45; cursor: not-allowed; filter: saturate(0.6); }
+    }
 
-      .team {
-        flex: 1;
-        padding: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.02);
+    &--create {
+      background: linear-gradient(135deg, $gold-bright 0%, $gold 55%, #b8960c 100%);
+      color: $forest;
+      border-color: rgba(244, 212, 137, 0.6);
+      box-shadow: 0 8px 22px -8px rgba(212, 175, 55, 0.6), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
 
-        input[type="text"] {
-          margin-bottom: 12px;
-        }
-
-        .player-assignment {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 0;
-          color: $text-primary;
-          min-height: 44px;
-
-          input[type="radio"] {
-            width: 22px;
-            height: 22px;
-            accent-color: $accent-blue;
-            cursor: pointer;
-          }
-
-          label {
-            margin-bottom: 0;
-            font-size: 15px;
-          }
-        }
+      &:hover:not(:disabled) {
+        box-shadow: 0 14px 30px -10px rgba(212, 175, 55, 0.7);
       }
     }
   }
