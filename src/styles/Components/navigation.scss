@@ -4,21 +4,24 @@
 // Mobile:  frosted bottom tab bar with a gold active indicator.
 // ============================================================================
 
-$fairway:      #2d5a27;
-$forest:       #0d2818;
-$light-green:  #4a7c43;
-$pale-green:   #7ba872;
-$gold:         #d4af37;
-$gold-bright:  #f4d489;
-$cream:        #f4efe2;
-$cream-dim:    rgba(244, 239, 226, 0.5);
+$fairway: #2d5a27;
+$forest: #0d2818;
+$light-green: #4a7c43;
+$pale-green: #7ba872;
+$gold: #d4af37;
+$gold-bright: #f4d489;
+$cream: #f4efe2;
+$cream-dim: rgba(244, 239, 226, 0.5);
 
 $font-display: 'Fraunces', Georgia, serif;
-$font-ui:      'Quicksand', -apple-system, sans-serif;
+$font-ui: 'Quicksand', -apple-system, sans-serif;
 
 .navigation-container {
-  // Desktop: top bar
-  position: relative;
+  // Desktop: full-width fixed top bar (spans the viewport, not the centered app column)
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 66px;
   width: 100%;
   display: flex;
@@ -58,7 +61,10 @@ $font-ui:      'Quicksand', -apple-system, sans-serif;
       letter-spacing: -0.01em;
       color: $cream;
 
-      span { color: $gold; font-style: italic; }
+      span {
+        color: $gold;
+        font-style: italic;
+      }
     }
   }
 
@@ -88,7 +94,9 @@ $font-ui:      'Quicksand', -apple-system, sans-serif;
         transition: transform 0.2s ease;
       }
 
-      &:hover { color: $cream; }
+      &:hover {
+        color: $cream;
+      }
 
       &.active {
         color: $gold;
@@ -96,7 +104,7 @@ $font-ui:      'Quicksand', -apple-system, sans-serif;
         &::after {
           content: "";
           position: absolute;
-          left: 0;
+          left: 50%;
           right: 0;
           bottom: -4px;
           height: 3px;
@@ -127,7 +135,9 @@ $font-ui:      'Quicksand', -apple-system, sans-serif;
     background: linear-gradient(0deg, rgba(8, 24, 14, 0.97) 0%, rgba(13, 40, 24, 0.94) 100%);
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
 
-    .left { display: none; }
+    .left {
+      display: none;
+    }
 
     .right {
       width: 100%;
@@ -149,7 +159,10 @@ $font-ui:      'Quicksand', -apple-system, sans-serif;
           align-items: center;
           justify-content: center;
 
-          svg { width: 23px; height: 23px; }
+          svg {
+            width: 23px;
+            height: 23px;
+          }
         }
 
         // gold pip indicator above the active tab
@@ -181,7 +194,9 @@ $font-ui:      'Quicksand', -apple-system, sans-serif;
           }
         }
 
-        &:active .nav-icon svg { transform: scale(0.9); }
+        &:active .nav-icon svg {
+          transform: scale(0.9);
+        }
       }
     }
   }
@@ -189,5 +204,7 @@ $font-ui:      'Quicksand', -apple-system, sans-serif;
 
 // Keep page content clear of the fixed bottom bar on mobile
 @media screen and (max-width: 768px) {
-  body { padding-bottom: 88px; }
+  body {
+    padding-bottom: 88px;
+  }
 }

@@ -272,10 +272,39 @@ $font-mono:    'JetBrains Mono', 'SF Mono', monospace;
       svg { color: $gold; opacity: 0.8; flex-shrink: 0; }
     }
 
+    &__phone {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      font-family: $font-ui;
+      font-size: 12.5px;
+      color: $cream-dim;
+      text-decoration: none;
+      transition: color 0.18s ease;
+
+      svg { color: $gold; opacity: 0.8; flex-shrink: 0; }
+
+      &:hover { color: $gold-bright; }
+    }
+
     &__actions {
       display: flex;
+      align-items: center;
       gap: 8px;
       flex-shrink: 0;
+    }
+
+    &__distance {
+      font-family: $font-mono;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      padding: 4px 8px;
+      border-radius: 8px;
+      color: $gold-bright;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.3);
     }
 
     &__btn {
@@ -309,7 +338,8 @@ $font-mono:    'JetBrains Mono', 'SF Mono', monospace;
     &__stats {
       display: flex;
       align-items: center;
-      gap: 22px;
+      flex-wrap: wrap;
+      gap: 12px 22px;
       margin: 16px 0 14px;
       padding-left: 4px;
     }
@@ -340,9 +370,19 @@ $font-mono:    'JetBrains Mono', 'SF Mono', monospace;
     &__tees {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 4px;
       margin-left: auto;
+      min-width: 0;
       padding-right: 2px;
+    }
+
+    &__tee-more {
+      font-family: $font-mono;
+      font-size: 10px;
+      font-weight: 600;
+      color: $cream-dim;
+      margin-left: 1px;
     }
 
     &__tee-dot {

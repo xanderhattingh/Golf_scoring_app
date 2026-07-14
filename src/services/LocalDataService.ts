@@ -83,6 +83,7 @@ export interface Round {
     currentHole: number;
     scores_count?: number;
     animalHolders?: AnimalHolders; // Current animal holders for front9 and back9
+    scoring_config?: { alliance?: { par3: number; par4: number; par5: number } } | null;
 }
 
 export interface ScoringMethod {

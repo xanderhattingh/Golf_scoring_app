@@ -6,7 +6,7 @@ import { z } from 'zod'
 import HttpService from '../../../services/HttpService.ts'
 import StorageService from '../../../services/StorageService.ts'
 import toast from 'react-simple-toasts'
-import golfBg from '../../../assets/golf-bg-2.jpg'
+import golfBg from '../../../assets/golf-bg-3.jpg'
 import AuthCrest from '../../../components/AuthCrest.tsx'
 
 import '../../../styles/Pages/profile.scss'

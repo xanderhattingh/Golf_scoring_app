@@ -109,16 +109,60 @@ const Rounds = () => {
 
         fullRound.scores = fullRound.scores || [];
 
+        // ---- Method flags ----
+        const mid = fullRound.scoring_method.id;
+        const isStroke = mid === 1;
+        const isMedal = mid === 7;
+        const isStrokeStyle = isStroke || isMedal;          // strokes only, no points
+        const isAlliance = mid === 8 || mid === 11;
+        const isBetterball = mid === 9;
+        const isWorstball = mid === 10;
+        const isTeamTotal = isBetterball || isWorstball;    // teams ranked by total
+        const usesPoints = !isStrokeStyle;                  // Stableford-based
+        const hasPink = mid === 4 || mid === 6;
+        const hasAnimals = mid === 5 || mid === 6;
+        const isMatchTeams = fullRound.format === 'teams' && (fullRound.teams?.length ?? 0) === 2 && !isTeamTotal;
+
+        // ---- Helpers ----
+        const holePar = (h: number) => fullRound.course.holes.find(x => x.hole_number === h)?.hole_par || 0;
+        const scoredHoles = fullRound.scores.map(s => s.holeNumber);
+        const scoredPar = scoredHoles.reduce((s, h) => s + holePar(h), 0);
+        const fmtToPar = (tp: number) => tp === 0 ? 'E' : tp > 0 ? `+${tp}` : `${tp}`;
+        const allianceCfg = fullRound.scoring_config?.alliance;
+        const alliancePerHole = (h: number) => {
+            const hs = fullRound.scores.find(s => s.holeNumber === h);
+            if (!hs || !allianceCfg) return 0;
+            const par = holePar(h);
+            const n = par === 3 ? allianceCfg.par3 : par === 5 ? allianceCfg.par5 : allianceCfg.par4;
+            return hs.playerScores.map(p => p.points).sort((a, b) => b - a).slice(0, n).reduce((a, b) => a + b, 0);
+        };
+        const teamHoleScore = (team: { playerIds: number[] }, h: number): number | null => {
+            const hs = fullRound.scores.find(s => s.holeNumber === h);
+            if (!hs) return null;
+            const pts = team.playerIds
+                .map(pid => hs.playerScores.find(p => p.playerId === pid)?.points)
+                .filter((v): v is number => v !== undefined);
+            if (!pts.length) return null;
+            return isWorstball ? Math.min(...pts) : Math.max(...pts);
+        };
+        const teamTotal = (team: {
+            playerIds: number[]
+        }) => scoredHoles.reduce((s, h) => s + (teamHoleScore(team, h) ?? 0), 0);
+
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        // Push the next block to a fresh page if it won't fit, so a table's header
+        // never gets orphaned at the bottom of a page.
+        const ensureSpace = (y: number, needed: number) => (y + needed > pageHeight - 12) ? (doc.addPage(), 20) : y;
 
         // Title
-        doc.setFontSize(20);
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('Golf Scorecard', pageWidth / 2, 20, {align: 'center'});
 
         // Round info
-        doc.setFontSize(12);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         let currentY = 35;
         const maxTextWidth = pageWidth - 28;
@@ -127,7 +171,8 @@ const Rounds = () => {
         currentY += 7;
         doc.text(`Date: ${formatDate(fullRound.date)}`, 14, currentY);
         currentY += 7;
-        doc.text(`Format: ${fullRound.format === 'teams' ? 'Teams' : 'Individual'}`, 14, currentY);
+        const formatLabel = isAlliance ? 'Alliance' : (fullRound.format === 'teams' ? 'Teams' : 'Individual');
+        doc.text(`Format: ${formatLabel}`, 14, currentY);
         currentY += 7;
         doc.text(`Scoring: ${fullRound.scoring_method.name}`, 14, currentY);
         currentY += 7;
@@ -165,27 +210,51 @@ const Rounds = () => {
             });
         });
 
-        // Summary table
+        // Summary table (method-aware columns)
         const summaryStartY = currentY + 10;
-        doc.setFontSize(14);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.text('Summary', 14, summaryStartY);
 
-        const summaryHeaders = ['Player', 'Handicap', 'Total Strokes', 'Total Points'];
-        const summaryData = fullRound.players.map(p => [
-            p.name,
-            p.handicap.toString(),
-            playerTotals[p.id].strokes.toString(),
-            playerTotals[p.id].points.toString()
-        ]);
+        let summaryHeaders: string[];
+        if (isMedal) {
+            summaryHeaders = ['Player', 'Handicap', 'Gross', 'Net'];
+        } else if (isStroke) {
+            summaryHeaders = ['Player', 'Handicap', 'Strokes', 'To Par'];
+        } else {
+            summaryHeaders = ['Player', 'Handicap', 'Total Strokes', 'Total Points'];
+        }
+
+        // For plain individual methods, rank the summary by the method's metric
+        const rankedPlayers = [...fullRound.players];
+        if (!isAlliance && fullRound.format !== 'teams') {
+            rankedPlayers.sort((a, b) => {
+                if (isMedal) return (playerTotals[a.id].strokes - a.handicap) - (playerTotals[b.id].strokes - b.handicap);
+                if (isStroke) return playerTotals[a.id].strokes - playerTotals[b.id].strokes;
+                return playerTotals[b.id].points - playerTotals[a.id].points;
+            });
+        }
+
+        const summaryData = rankedPlayers.map(p => {
+            const t = playerTotals[p.id];
+            if (isMedal) return [p.name, p.handicap.toString(), t.strokes.toString(), (t.strokes - p.handicap).toString()];
+            if (isStroke) return [p.name, p.handicap.toString(), t.strokes.toString(), fmtToPar(t.strokes - scoredPar)];
+            return [p.name, p.handicap.toString(), t.strokes.toString(), t.points.toString()];
+        });
 
         autoTable(doc, {
             startY: summaryStartY + 5,
             head: [summaryHeaders],
             body: summaryData,
-            theme: 'striped',
+            theme: 'striped', styles: {fontSize: 8},
             headStyles: {fillColor: [45, 90, 39]},
-            margin: {left: 14, right: 14}
+            margin: {left: 14, right: 14},
+            didParseCell: (data) => {
+                // Bold only the score/result column (To Par / Net / Points), not the strokes
+                if (data.section === 'body' && data.column.index === 3) {
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            }
         });
 
         // Helper to get hole winner for team matches
@@ -214,34 +283,27 @@ const Rounds = () => {
             return {winner: 'Halved', team1Best, team2Best};
         };
 
-        // Team Match Results (if team format)
+        // ---- Result section (method-aware) ----
         // @ts-expect-error autoTable adds lastAutoTable to doc
         let scorecardStartY = doc.lastAutoTable.finalY + 15;
 
-        if (fullRound.format === 'teams' && fullRound.teams && fullRound.teams.length === 2) {
-            // Calculate team results
-            let team1Wins = 0;
-            let team2Wins = 0;
-            let halved = 0;
-
+        if (isMatchTeams && fullRound.teams) {
+            // Match Play / team Stableford: holes won
+            let team1Wins = 0, team2Wins = 0, halved = 0;
             for (let h = 1; h <= 18; h++) {
                 const result = getHoleWinner(h);
                 if (result.winner === fullRound.teams[0].name) team1Wins++;
                 else if (result.winner === fullRound.teams[1].name) team2Wins++;
                 else if (result.winner === 'Halved') halved++;
             }
-
             const diff = team1Wins - team2Wins;
             let matchResult = 'All Square';
-            if (diff > 0) {
-                matchResult = `${fullRound.teams[0].name} wins ${diff} up`;
-            } else if (diff < 0) {
-                matchResult = `${fullRound.teams[1].name} wins ${Math.abs(diff)} up`;
-            }
+            if (diff > 0) matchResult = `${fullRound.teams[0].name} wins ${diff} up`;
+            else if (diff < 0) matchResult = `${fullRound.teams[1].name} wins ${Math.abs(diff)} up`;
 
             // @ts-expect-error autoTable adds lastAutoTable to doc
             const teamResultsY = doc.lastAutoTable.finalY + 10;
-            doc.setFontSize(14);
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
             doc.text('Match Result', 14, teamResultsY);
 
@@ -252,7 +314,8 @@ const Rounds = () => {
                     [fullRound.teams[0].name, team1Wins.toString(), halved.toString(), diff > 0 ? 'WINNER' : (diff === 0 ? 'DRAW' : '')],
                     [fullRound.teams[1].name, team2Wins.toString(), halved.toString(), diff < 0 ? 'WINNER' : (diff === 0 ? 'DRAW' : '')]
                 ],
-                theme: 'striped',
+                theme: 'striped', styles: {fontSize: 8},
+                bodyStyles: {fontStyle: 'bold'},
                 headStyles: {fillColor: [16, 185, 129]},
                 margin: {left: 14, right: 14},
                 didParseCell: (data) => {
@@ -263,19 +326,71 @@ const Rounds = () => {
                 }
             });
 
-            // Overall match result
-            doc.setFontSize(12);
+            doc.setFontSize(9);
             doc.setFont('helvetica', 'bold');
             // @ts-expect-error autoTable adds lastAutoTable to doc
             doc.text(`Final Result: ${matchResult}`, 14, doc.lastAutoTable.finalY + 10);
+            // @ts-expect-error autoTable adds lastAutoTable to doc
+            scorecardStartY = doc.lastAutoTable.finalY + 20;
+        } else if (isTeamTotal && fullRound.teams) {
+            // Betterball / Worst Ball: rank teams by total
+            const ranked = [...fullRound.teams]
+                .map(t => ({name: t.name, total: teamTotal(t)}))
+                .sort((a, b) => b.total - a.total);
+            const label = isWorstball ? 'Worst Ball Total' : 'Better Ball Total';
 
+            // @ts-expect-error autoTable adds lastAutoTable to doc
+            const resY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Team Result', 14, resY);
+
+            autoTable(doc, {
+                startY: resY + 5,
+                head: [['Team', label, 'Result']],
+                body: ranked.map((t, i) => [
+                    t.name,
+                    t.total.toString(),
+                    i === 0 && (ranked.length < 2 || ranked[0].total !== ranked[1].total) ? 'WINNER' : (ranked.length === 2 && ranked[0].total === ranked[1].total ? 'TIE' : ''),
+                ]),
+                theme: 'striped', styles: {fontSize: 8},
+                bodyStyles: {fontStyle: 'bold'},
+                headStyles: {fillColor: [16, 185, 129]},
+                margin: {left: 14, right: 14},
+                didParseCell: (data) => {
+                    if (data.column.index === 2 && data.cell.raw === 'WINNER') {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [16, 185, 129];
+                    }
+                }
+            });
+            // @ts-expect-error autoTable adds lastAutoTable to doc
+            scorecardStartY = doc.lastAutoTable.finalY + 20;
+        } else if (isAlliance && allianceCfg) {
+            // Four Ball Alliance: one team total (best N per hole, by par)
+            // @ts-expect-error autoTable adds lastAutoTable to doc
+            const resY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Alliance Result', 14, resY);
+
+            const total = scoredHoles.reduce((s, h) => s + alliancePerHole(h), 0);
+            autoTable(doc, {
+                startY: resY + 5,
+                head: [['Scores to count', 'Alliance Total']],
+                body: [[`Par 3: ${allianceCfg.par3} · Par 4: ${allianceCfg.par4} · Par 5: ${allianceCfg.par5}`, total.toString()]],
+                theme: 'striped', styles: {fontSize: 8},
+                headStyles: {fillColor: [16, 185, 129]},
+                margin: {left: 14, right: 14},
+                didParseCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 1) {
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                },
+            });
             // @ts-expect-error autoTable adds lastAutoTable to doc
             scorecardStartY = doc.lastAutoTable.finalY + 20;
         }
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Scorecard - Front 9', 14, scorecardStartY);
-
         // Sort scores by hole number
         const sortedScores = [...fullRound.scores].sort((a, b) => a.holeNumber - b.holeNumber);
 
@@ -310,13 +425,13 @@ const Rounds = () => {
             // Track pink ball cells for styling: {rowIndex: {colIndex: true}}
             const pinkCells: Record<number, Record<number, boolean>> = {};
 
-            // Player rows (strokes and points for each)
+            // Player rows: strokes always; points only for Stableford-based methods
             const playerRows: string[][] = [];
             fullRound.players.forEach(p => {
                 let strokesTotal = 0;
                 let pointsTotal = 0;
                 const strokesRow = [`${p.name}`];
-                const pointsRow = [`${p.name} Pts`];
+                const pointsRow = [`Pts`];
                 const strokesRowIndex = playerRows.length + 2; // +2 for par and SI rows
                 const pointsRowIndex = strokesRowIndex + 1;
 
@@ -328,30 +443,30 @@ const Rounds = () => {
                     strokesTotal += strokes;
                     pointsTotal += points;
                     strokesRow.push(strokes > 0 ? strokes.toString() : '-');
-                    pointsRow.push(points >= 0 && strokes > 0 ? points.toString() : '-');
+                    pointsRow.push(strokes > 0 ? points.toString() : '-');
 
-                    // Check if this player had pink ball on this hole
-                    // Mark both strokes cell AND points cell as pink
-                    if (holeScore?.pinkPlayerId === p.id && strokes > 0) {
+                    // Highlight pink-ball cells (Stableford with Pink)
+                    if (hasPink && holeScore?.pinkPlayerId === p.id && strokes > 0) {
                         const colIndex = h - startHole + 1; // +1 for label column
                         if (!pinkCells[strokesRowIndex]) pinkCells[strokesRowIndex] = {};
-                        if (!pinkCells[pointsRowIndex]) pinkCells[pointsRowIndex] = {};
                         pinkCells[strokesRowIndex][colIndex] = true;
-                        pinkCells[pointsRowIndex][colIndex] = true;
+                        if (usesPoints) {
+                            if (!pinkCells[pointsRowIndex]) pinkCells[pointsRowIndex] = {};
+                            pinkCells[pointsRowIndex][colIndex] = true;
+                        }
                     }
                 }
                 strokesRow.push(strokesTotal.toString());
                 pointsRow.push(pointsTotal.toString());
                 playerRows.push(strokesRow);
-                playerRows.push(pointsRow);
+                if (usesPoints) playerRows.push(pointsRow);
             });
 
-            // Winner row for team matches
-            const winnerRow: string[] = [];
-            if (fullRound.format === 'teams' && fullRound.teams && fullRound.teams.length === 2) {
-                winnerRow.push('Winner');
-                let team1Wins = 0;
-                let team2Wins = 0;
+            // Extra summary rows below the players
+            const extraRows: string[][] = [];
+            if (isMatchTeams && fullRound.teams) {
+                const winnerRow: string[] = ['Winner'];
+                let team1Wins = 0, team2Wins = 0;
                 for (let h = startHole; h <= endHole; h++) {
                     const result = getHoleWinner(h);
                     if (result.winner === fullRound.teams[0].name) {
@@ -360,36 +475,73 @@ const Rounds = () => {
                     } else if (result.winner === fullRound.teams[1].name) {
                         winnerRow.push(fullRound.teams[1].name.substring(0, 8));
                         team2Wins++;
-                    } else if (result.winner === 'Halved') {
-                        winnerRow.push('Halved');
-                    } else {
-                        winnerRow.push('-');
-                    }
+                    } else if (result.winner === 'Halved') winnerRow.push('Halved');
+                    else winnerRow.push('-');
                 }
                 winnerRow.push(`${team1Wins}-${team2Wins}`);
+                extraRows.push(winnerRow);
+            } else if (isTeamTotal && fullRound.teams) {
+                // Each team's counting (better/worst) ball per hole + 9 total
+                fullRound.teams.forEach(team => {
+                    const row = [`${team.name} ${isWorstball ? '(WB)' : '(BB)'}`];
+                    let tot = 0;
+                    for (let h = startHole; h <= endHole; h++) {
+                        const v = teamHoleScore(team, h);
+                        row.push(v === null ? '-' : v.toString());
+                        if (v !== null) tot += v;
+                    }
+                    row.push(tot.toString());
+                    extraRows.push(row);
+                });
+            } else if (isAlliance && allianceCfg) {
+                const row = ['Alliance'];
+                let tot = 0;
+                for (let h = startHole; h <= endHole; h++) {
+                    const hasScore = !!sortedScores.find(s => s.holeNumber === h);
+                    const v = alliancePerHole(h);
+                    row.push(hasScore ? v.toString() : '-');
+                    if (hasScore) tot += v;
+                }
+                row.push(tot.toString());
+                extraRows.push(row);
             }
 
-            const bodyRows = [parRow, siRow, ...playerRows];
-            if (winnerRow.length > 0) {
-                bodyRows.push(winnerRow);
-            }
-
-            return {headers, body: bodyRows, pinkCells};
+            return {headers, body: [parRow, siRow, ...playerRows, ...extraRows], pinkCells};
         };
 
-        // Front 9 table
+        // Front 9 table (keep title + table together on the same page)
         const front9 = buildScorecardData(1, 9);
+        scorecardStartY = ensureSpace(scorecardStartY, 14 + front9.body.length * 7);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Scorecard - Front 9', 14, scorecardStartY);
         autoTable(doc, {
             startY: scorecardStartY + 5,
             head: [front9.headers],
             body: front9.body,
             theme: 'grid',
-            headStyles: {fillColor: [45, 90, 39], fontSize: 8, halign: 'center'},
-            bodyStyles: {fontSize: 8, halign: 'center'},
+            headStyles: {fillColor: [45, 90, 39], fontSize: 7, halign: 'center'},
+            bodyStyles: {fontSize: 7, halign: 'center'},
             columnStyles: {0: {halign: 'left', fontStyle: 'bold'}},
             margin: {left: 14, right: 14},
             styles: {cellPadding: 2},
             didParseCell: (data) => {
+                // Bold the actual scores (player + team rows); leave Par/SI normal
+                if (data.section === 'body') {
+                    const label = Array.isArray(data.row.raw) ? data.row.raw[0] : undefined;
+                    if (
+                        label !== 'Par'
+                        && label !== 'SI'
+                        && (
+                            label.toString().indexOf("Pts") > -1
+                            || label.toString().indexOf("Alliance") > -1
+                            || label.toString().indexOf("Winner") > -1
+                        )
+                    ) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [0, 0, 0];
+                    }
+                }
                 // Apply pink background to cells where player had pink ball
                 if (data.row.index !== undefined && front9.pinkCells[data.row.index]?.[data.column.index]) {
                     data.cell.styles.fillColor = [236, 72, 153]; // Pink color
@@ -398,25 +550,40 @@ const Rounds = () => {
             }
         });
 
-        // Back 9 table
+        // Back 9 table (push the whole block to a new page if it won't fit)
+        const back9 = buildScorecardData(10, 18);
         // @ts-expect-error autoTable adds lastAutoTable to doc
-        const back9StartY = doc.lastAutoTable.finalY + 10;
-        doc.setFontSize(14);
+        let back9StartY = ensureSpace(doc.lastAutoTable.finalY + 10, 14 + back9.body.length * 7);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.text('Scorecard - Back 9', 14, back9StartY);
-
-        const back9 = buildScorecardData(10, 18);
         autoTable(doc, {
             startY: back9StartY + 5,
             head: [back9.headers],
             body: back9.body,
             theme: 'grid',
-            headStyles: {fillColor: [45, 90, 39], fontSize: 8, halign: 'center'},
-            bodyStyles: {fontSize: 8, halign: 'center'},
+            headStyles: {fillColor: [45, 90, 39], fontSize: 7, halign: 'center'},
+            bodyStyles: {fontSize: 7, halign: 'center'},
             columnStyles: {0: {halign: 'left', fontStyle: 'bold'}},
             margin: {left: 14, right: 14},
             styles: {cellPadding: 2},
             didParseCell: (data) => {
+                // Bold the actual scores (player + team rows); leave Par/SI normal
+                if (data.section === 'body') {
+                    const label = Array.isArray(data.row.raw) ? data.row.raw[0] : undefined;
+                    if (
+                        label !== 'Par'
+                        && label !== 'SI'
+                        && (
+                            label.toString().indexOf("Pts") > -1
+                            || label.toString().indexOf("Alliance") > -1
+                            || label.toString().indexOf("Winner") > -1
+                        )
+                    ) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [0, 0, 0];
+                    }
+                }
                 // Apply pink background to cells where player had pink ball
                 if (data.row.index !== undefined && back9.pinkCells[data.row.index]?.[data.column.index]) {
                     data.cell.styles.fillColor = [236, 72, 153]; // Pink color
@@ -425,15 +592,47 @@ const Rounds = () => {
             }
         });
 
+        // Animals section (Stableford with Animals) — final holder of each animal per nine
+        if (hasAnimals && fullRound.animalHolders) {
+            const animalLabels: Record<string, string> = {
+                tree: 'Tree',
+                water: 'Water',
+                bunker: 'Bunker',
+                three_putt: '3-Putt'
+            };
+            const types = ['tree', 'water', 'bunker', 'three_putt'] as const;
+            const holderName = (entry: { playerId: number } | null) =>
+                entry ? (fullRound.players.find(p => p.id === entry.playerId)?.name || '?') : '—';
+            const animalBody = types.map(tp => [
+                animalLabels[tp],
+                holderName(fullRound.animalHolders!.front9[tp]),
+                holderName(fullRound.animalHolders!.back9[tp]),
+            ]);
+
+            // @ts-expect-error autoTable adds lastAutoTable to doc
+            const animalsY = ensureSpace(doc.lastAutoTable.finalY + 12, 14 + animalBody.length * 7);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Animals (holder at the end of each nine)', 14, animalsY);
+            autoTable(doc, {
+                startY: animalsY + 5,
+                head: [['Animal', 'Front 9', 'Back 9']],
+                body: animalBody,
+                theme: 'striped', styles: {fontSize: 8},
+                headStyles: {fillColor: [45, 90, 39]},
+                margin: {left: 14, right: 14},
+            });
+        }
+
         // Save the PDF
         const fileName = `${fullRound.course.name.replace(/\s+/g, '_')}_${fullRound.date}.pdf`;
-        
+
         // Check if running on native mobile platform
         if (Capacitor.isNativePlatform()) {
             // Mobile: Save to filesystem and share
             const pdfOutput = doc.output('datauristring');
             const base64Data = pdfOutput.split(',')[1];
-            
+
             try {
                 // Write file to cache directory
                 const result = await Filesystem.writeFile({
@@ -442,7 +641,7 @@ const Rounds = () => {
                     directory: Directory.Cache,
                     recursive: true
                 });
-                
+
                 // Share the file
                 await Share.share({
                     title: `Golf Scorecard - ${fullRound.course.name}`,
@@ -470,7 +669,7 @@ const Rounds = () => {
                 <div className="rounds-container">
                     <header className="clubhouse-header">
                         <div className="clubhouse-header__crest">
-                            <AuthCrest />
+                            <AuthCrest/>
                         </div>
                         <div className="clubhouse-header__titles">
                             <h1>Rounds</h1>
@@ -489,7 +688,7 @@ const Rounds = () => {
                     {rounds.length === 0 ? (
                         <div className="rounds-empty">
                             <div className="rounds-empty__crest">
-                                <AuthCrest />
+                                <AuthCrest/>
                             </div>
                             <h3>No rounds yet</h3>
                             <p>Tee off your first round to start keeping score.</p>
@@ -511,13 +710,15 @@ const Rounds = () => {
                                                 <h2>{round.course.name}</h2>
                                                 <div className="round-card__sub">
                                                     <span className="round-card__date">{formatDate(round.date)}</span>
-                                                    <span className="round-card__method">{round.scoring_method.name}</span>
+                                                    <span
+                                                        className="round-card__method">{round.scoring_method.name}</span>
                                                     {round.format === 'teams' && (
                                                         <span className="round-card__format">Teams</span>
                                                     )}
                                                 </div>
                                             </div>
-                                            <span className={`round-status ${round.completed ? 'round-status--done' : 'round-status--active'}`}>
+                                            <span
+                                                className={`round-status ${round.completed ? 'round-status--done' : 'round-status--active'}`}>
                                                 {round.completed ? 'Completed' : 'In Progress'}
                                             </span>
                                         </div>
@@ -544,7 +745,7 @@ const Rounds = () => {
 
                                         <div className="round-card__progress">
                                             <div className="round-card__bar">
-                                                <span style={{width: `${pct}%`}} />
+                                                <span style={{width: `${pct}%`}}/>
                                             </div>
                                             <span className="round-card__holes">{holesPlayed}/18</span>
                                         </div>
@@ -557,8 +758,10 @@ const Rounds = () => {
                                                             title="View round">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                              viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                             strokeWidth="2" strokeLinecap="round"
+                                                             strokeLinejoin="round">
+                                                            <path
+                                                                d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                                             <circle cx="12" cy="12" r="3"></circle>
                                                         </svg>
                                                         View
@@ -568,7 +771,8 @@ const Rounds = () => {
                                                             title="Export to PDF">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                              viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                             strokeWidth="2" strokeLinecap="round"
+                                                             strokeLinejoin="round">
                                                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                                             <polyline points="7 10 12 15 17 10"></polyline>
                                                             <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -591,10 +795,12 @@ const Rounds = () => {
                                                     onClick={() => handleDeleteClick(round)}
                                                     title="Delete round">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     strokeWidth="2"
                                                      strokeLinecap="round" strokeLinejoin="round">
                                                     <polyline points="3 6 5 6 21 6"></polyline>
-                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                    <path
+                                                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                                 </svg>
                                             </button>
                                         </div>

@@ -1,0 +1,55 @@
+// Palette (kept local — the project defines colours per-stylesheet)
+$gold-bright: #f4d489;
+$cream: #f4efe2;
+$cream-faint: rgba(244, 239, 226, 0.34);
+$font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+
+// Inline [-] value [+] stepper. Mirrors the handicap stepper on the create-round
+// wizard; used for entering shots on the round-detail screen.
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+
+  &__btn {
+    width: 48px;
+    height: 56px;
+    border: none;
+    background: rgba(212, 175, 55, 0.1);
+    color: $gold-bright;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+
+    &:hover:not(:disabled) { background: rgba(212, 175, 55, 0.22); }
+    &:active:not(:disabled) { background: rgba(212, 175, 55, 0.3); }
+    &:disabled { opacity: 0.3; cursor: not-allowed; }
+  }
+
+  &__value {
+    min-width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid rgba(212, 175, 55, 0.2);
+    border-right: 1px solid rgba(212, 175, 55, 0.2);
+    background: rgba(6, 18, 11, 0.5);
+    color: $cream;
+    font-family: $font-mono;
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1;
+    user-select: none;
+
+    // While still showing the par default (untouched), dim it like a placeholder.
+    &.is-default { color: $cream-faint; }
+  }
+}

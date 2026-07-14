@@ -37,6 +37,13 @@ const icons = {
             <circle cx="12" cy="7" r="4"/>
         </svg>
     ),
+    tournament: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+             strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="8" r="6"/>
+            <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+        </svg>
+    ),
 };
 
 const navItems = [
@@ -44,6 +51,7 @@ const navItems = [
     {to: "/dashboard/friends", label: "Friends", icon: icons.friends},
     {to: "/dashboard/rounds", label: "Rounds", icon: icons.rounds},
     {to: "/dashboard/profile", label: "Profile", icon: icons.profile},
+    {to: "/dashboard/tournament", label: "Tournament", icon: icons.tournament},
 ];
 
 const Navigation = () => {

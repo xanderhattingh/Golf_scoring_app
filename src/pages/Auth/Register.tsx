@@ -23,7 +23,7 @@ const registerSchema = z.object({
     confirmPassword: z.string(),
     inviteCode: z.string().length(6).regex(/^\d{6}$/).optional().or(z.literal("")),
 }).superRefine((data, ctx) => {
-    // If no invite code, require name and surname
+    // If no invite code, require name, surname and email
     if (!data.inviteCode) {
         if (!data.name || data.name.length < 2) {
             ctx.addIssue({
@@ -37,6 +37,13 @@ const registerSchema = z.object({
                 code: z.ZodIssueCode.custom,
                 message: "Surname is required",
                 path: ["surname"],
+            });
+        }
+        if (!data.email || data.email.length === 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Email is required",
+                path: ["email"],
             });
         }
     }

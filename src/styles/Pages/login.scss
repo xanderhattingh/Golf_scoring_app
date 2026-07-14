@@ -507,6 +507,27 @@ $font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 }
 
 // ---------------------------------------------------------------------------
+// Forgot-password link tucked below the sign-in button
+// ---------------------------------------------------------------------------
+.forgot-password-link {
+  margin-top: 14px;
+  text-align: center;
+  font-family: $font-ui;
+  font-size: 13px;
+
+  a {
+    color: $cream-dim;
+    text-decoration: none;
+    letter-spacing: 0.3px;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: $gold-bright;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Footer links
 // ---------------------------------------------------------------------------
 .no-account {

@@ -3,17 +3,19 @@ import HttpService from "../../../services/HttpService.ts";
 
 import "../../../styles/Pages/Courses.scss"
 import "../../../styles/Shared/backgrounds.scss"
-import AddCourseModal from "../../../components/AddCourseModal.tsx";
-import ConfirmDialog from "../../../components/ConfirmDialog.tsx";
-import ApiImportModal from "../../../components/ApiImportModal.tsx";
 import AuthCrest from "../../../components/AuthCrest.tsx";
 import golfBg from "../../../assets/golf-bg.jpg";
 import toast from "react-simple-toasts";
+import {getCurrentCoords} from "../../../utils/geo.ts";
 
 interface Course {
     id: number;
     name: string;
     location: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    phone: string | null;
+    distance_km: number | null;
     num_holes: number;
     tees: CourseTee[];
 }
@@ -36,33 +38,54 @@ interface Hole {
     stroke_index: number;
 }
 
+// Cap how many tee dots render on a card; the rest collapse into a "+N" chip
+const MAX_TEE_DOTS = 6;
+
 const Courses = () => {
-    const [courseModalBool, setCourseModalBool] = useState(false);
-    const [courseModalMode, setCourseModalMode] = useState<'add' | 'edit'>('add');
-    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
     const [courses, setCourses] = useState<Course[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [confirmDialog, setConfirmDialog] = useState<{
-        isOpen: boolean;
-        courseId: number | null;
-        courseName: string;
-    }>({
-        isOpen: false,
-        courseId: null,
-        courseName: ''
-    });
-    const [apiImportModalOpen, setApiImportModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    // null = not resolved yet, false = denied/unavailable, {lat,lng} = located
+    const [coords, setCoords] = useState<{lat: number; lng: number} | null | false>(null);
 
+    // Resolve the user's location once on mount, then load the nearest courses.
+    // Works on web and native (Capacitor); resolves to false if unavailable/denied.
     useEffect(() => {
-        fetchCourses();
+        let active = true;
+        getCurrentCoords().then((c) => {
+            if (active) setCoords(c ?? false);
+        });
+        return () => { active = false; };
     }, []);
 
-    const fetchCourses = async () => {
+    // Load courses whenever the search or resolved location changes (debounced)
+    useEffect(() => {
+        if (coords === null) return; // wait for the geolocation attempt to settle
+
+        const handle = setTimeout(() => {
+            const params: Record<string, string> = {};
+            const q = searchQuery.trim();
+            if (q) {
+                params.search = q;
+            } else if (coords) {
+                params.lat = String(coords.lat);
+                params.lng = String(coords.lng);
+            } else {
+                params.limit = '10'; // no location & no search → first 10 alphabetically
+            }
+            loadCourses(params);
+        }, searchQuery.trim() ? 350 : 0); // debounce typing; load instantly otherwise
+
+        return () => clearTimeout(handle);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery, coords]);
+
+    const loadCourses = async (params: Record<string, string>) => {
         setIsLoading(true);
         try {
             const httpService = new HttpService();
-            const response = await httpService.get("courses");
+            const qs = new URLSearchParams(params).toString();
+            const response = await httpService.get(`courses${qs ? `?${qs}` : ''}`);
             setCourses(response.data.data || []);
         } catch (error: any) {
             console.error("Error fetching courses:", error);
@@ -70,81 +93,6 @@ const Courses = () => {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleAddCourseClick = () => {
-        setCourseModalMode('add');
-        setSelectedCourse(null);
-        setCourseModalBool(true);
-    }
-
-    const handleEditCourseClick = (course: Course) => {
-        setCourseModalMode('edit');
-        setSelectedCourse(course);
-        setCourseModalBool(true);
-    }
-
-    const handleCloseModalClick = () => {
-        setCourseModalBool(false);
-        setSelectedCourse(null);
-    }
-
-    const handleCourseAdded = (newCourse: Course) => {
-        setCourses((old) => [...old, newCourse]);
-        setCourseModalBool(false);
-        toast("Course created successfully!", {className: "success-toast"});
-    }
-
-    const handleCourseUpdated = (updatedCourse: Course) => {
-        if (!updatedCourse || !updatedCourse.id) {
-            // If we didn't get proper data back, refresh the whole list
-            fetchCourses();
-        } else {
-            setCourses((old) => old.map(course => course.id === updatedCourse.id ? updatedCourse : course));
-        }
-        setCourseModalBool(false);
-        setSelectedCourse(null);
-        toast("Course updated successfully!", {className: "success-toast"});
-    }
-
-    const handleDeleteClick = (course: Course) => {
-        setConfirmDialog({
-            isOpen: true,
-            courseId: course.id,
-            courseName: course.name
-        });
-    };
-
-    const handleConfirmDelete = async () => {
-        if (!confirmDialog.courseId) return;
-
-        try {
-            const httpService = new HttpService();
-            await httpService.delete(`courses/${confirmDialog.courseId}`);
-            setCourses((old) => old.filter(c => c.id !== confirmDialog.courseId));
-            toast("Course deleted successfully", {className: "success-toast"});
-        } catch (error: any) {
-            console.error("Error deleting course:", error);
-            toast(error.response?.data?.message || "Failed to delete course", {className: "error-toast"});
-        } finally {
-            setConfirmDialog({isOpen: false, courseId: null, courseName: ''});
-        }
-    };
-
-    const handleCancelDelete = () => {
-        setConfirmDialog({isOpen: false, courseId: null, courseName: ''});
-    };
-
-    const handleApiImportClick = () => {
-        setApiImportModalOpen(true);
-    };
-
-    const handleCloseApiImport = () => {
-        setApiImportModalOpen(false);
-    };
-
-    const handleCourseImported = () => {
-        fetchCourses();
     };
 
     // Pull the holes (ordered) from a course's first tee for the mini scorecard
@@ -156,11 +104,22 @@ const Courses = () => {
 
     const sumPar = (holes: Hole[]): number => holes.reduce((total, h) => total + (h.par || 0), 0);
 
-    // Filter courses based on search query
-    const filteredCourses = courses.filter(course =>
-        course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (course.location && course.location.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    // Google Maps link — prefer exact coords, fall back to a name/location search
+    const mapsUrl = (course: Course): string | null => {
+        if (course.latitude != null && course.longitude != null) {
+            return `https://www.google.com/maps/search/?api=1&query=${course.latitude},${course.longitude}`;
+        }
+        const q = [course.name, course.location].filter(Boolean).join(' ');
+        return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
+    };
+
+    // Context-aware subtitle (search results vs nearest vs fallback)
+    const subtitle = (() => {
+        const n = courses.length;
+        if (searchQuery.trim()) return `${n} result${n !== 1 ? 's' : ''} for "${searchQuery.trim()}"`;
+        if (coords) return `${n} course${n !== 1 ? 's' : ''} nearest to you`;
+        return `${n} course${n !== 1 ? 's' : ''}`;
+    })();
 
     return (
         <div className="page-with-background">
@@ -176,16 +135,11 @@ const Courses = () => {
                         </div>
                         <div className="clubhouse-header__titles">
                             <h1>Courses</h1>
-                            <span className="clubhouse-header__sub">
-                                {filteredCourses.length}{searchQuery ? ` of ${courses.length}` : ''} course{filteredCourses.length !== 1 ? 's' : ''} in your clubhouse
-                            </span>
+                            <span className="clubhouse-header__sub">{subtitle}</span>
                         </div>
                     </header>
 
                     <div className="courses-toolbar">
-                        <button className="btn-course btn-course--add" onClick={handleAddCourseClick}>
-                            <span className="btn-course__plus">+</span> Add Course
-                        </button>
                         <div className="courses-search">
                             <svg className="courses-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -209,9 +163,6 @@ const Courses = () => {
                                 </button>
                             )}
                         </div>
-                        <button className="btn-course btn-course--import" onClick={handleApiImportClick}>
-                            Import from API
-                        </button>
                     </div>
 
                     {isLoading ? (
@@ -220,28 +171,24 @@ const Courses = () => {
                                 <div key={i} className="scorecard scorecard--skeleton" />
                             ))}
                         </div>
-                    ) : filteredCourses.length === 0 ? (
+                    ) : courses.length === 0 ? (
                         <div className="courses-empty">
                             <div className="courses-empty__crest">
                                 <AuthCrest />
                             </div>
                             <h3>{searchQuery ? 'No matches found' : 'No courses yet'}</h3>
-                            <p>{searchQuery ? `Nothing in the clubhouse matches "${searchQuery}"` : 'Add your first course to start keeping the card.'}</p>
-                            {!searchQuery && (
-                                <button className="btn-course btn-course--add" onClick={handleAddCourseClick}>
-                                    <span className="btn-course__plus">+</span> Add Course
-                                </button>
-                            )}
+                            <p>{searchQuery ? `Nothing in the clubhouse matches "${searchQuery}"` : 'Courses will appear here once they have been imported.'}</p>
                         </div>
                     ) : (
                         <div className="courses-grid">
-                            {filteredCourses.map((course) => {
+                            {courses.map((course) => {
                                 const holes = getHoles(course);
                                 const front = holes.slice(0, 9);
                                 const back = holes.slice(9, 18);
                                 const par = sumPar(holes);
                                 const out = sumPar(front);
                                 const inn = sumPar(back);
+                                const maps = mapsUrl(course);
                                 return (
                                     <article key={course.id} className="scorecard">
                                         <div className="scorecard__head">
@@ -261,32 +208,40 @@ const Courses = () => {
                                                         {course.location}
                                                     </div>
                                                 )}
+                                                {course.phone && (
+                                                    <a className="scorecard__phone" href={`tel:${course.phone.replace(/\s+/g, '')}`}>
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                                             stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                             strokeLinejoin="round">
+                                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                                        </svg>
+                                                        {course.phone}
+                                                    </a>
+                                                )}
                                             </div>
                                             <div className="scorecard__actions">
-                                                <button
-                                                    className="scorecard__btn"
-                                                    onClick={() => handleEditCourseClick(course)}
-                                                    title="Edit course"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    className="scorecard__btn scorecard__btn--danger"
-                                                    onClick={() => handleDeleteClick(course)}
-                                                    title="Delete course"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                    </svg>
-                                                </button>
+                                                {course.distance_km != null && (
+                                                    <span className="scorecard__distance" title="Distance from you">
+                                                        {course.distance_km} km
+                                                    </span>
+                                                )}
+                                                {maps && (
+                                                    <a
+                                                        className="scorecard__btn"
+                                                        href={maps}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        title="Open in Google Maps"
+                                                        aria-label="Open in Google Maps"
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                             stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                                                             strokeLinejoin="round">
+                                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                                            <circle cx="12" cy="10" r="3"></circle>
+                                                        </svg>
+                                                    </a>
+                                                )}
                                             </div>
                                         </div>
 
@@ -303,13 +258,16 @@ const Courses = () => {
                                             </div>
                                             {course.tees?.length > 0 && (
                                                 <div className="scorecard__tees" title={course.tees.map(t => t.tee_name).join(', ')}>
-                                                    {course.tees.map((t) => (
+                                                    {course.tees.slice(0, MAX_TEE_DOTS).map((t) => (
                                                         <span
                                                             key={t.id}
                                                             className="scorecard__tee-dot"
                                                             style={{backgroundColor: t.colour_code || '#ccc'}}
                                                         />
                                                     ))}
+                                                    {course.tees.length > MAX_TEE_DOTS && (
+                                                        <span className="scorecard__tee-more">+{course.tees.length - MAX_TEE_DOTS}</span>
+                                                    )}
                                                     <span className="scorecard__tees-count">
                                                         {course.tees.length} tee{course.tees.length !== 1 ? 's' : ''}
                                                     </span>
@@ -354,32 +312,6 @@ const Courses = () => {
                     )}
                 </div>
             </div>
-
-            {courseModalBool && <AddCourseModal
-                mode={courseModalMode}
-                course={selectedCourse}
-                onCloseModal={handleCloseModalClick}
-                onCourseAdded={handleCourseAdded}
-                onCourseUpdated={handleCourseUpdated}
-            ></AddCourseModal>}
-
-            <ConfirmDialog
-                isOpen={confirmDialog.isOpen}
-                title="Delete Course"
-                message={`Are you sure you want to delete ${confirmDialog.courseName}? This will remove all tee data and cannot be undone.`}
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="danger"
-                onConfirm={handleConfirmDelete}
-                onCancel={handleCancelDelete}
-            />
-
-            {apiImportModalOpen && (
-                <ApiImportModal
-                    onClose={handleCloseApiImport}
-                    onCourseImported={handleCourseImported}
-                />
-            )}
         </div>
     )
 }

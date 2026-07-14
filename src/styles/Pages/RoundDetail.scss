@@ -23,7 +23,8 @@ $font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 .round-detail-container {
   max-width: 760px;
   margin: 0 auto;
-  padding-bottom: 96px !important;
+  // This page has no bottom nav — only reserve room for the fixed action bar
+  padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important;
 
   --crest-gold: #{$gold};
 
@@ -246,6 +247,82 @@ $font-mono: 'JetBrains Mono', 'SF Mono', monospace;
       color: $gold-bright;
       border-color: rgba(212, 175, 55, 0.5);
     }
+
+    .rd-alliance-cfg {
+      display: block;
+      margin-top: 4px;
+      font-family: $font-ui;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: $cream-dim;
+    }
+  }
+
+  // ---- Betterball team standings ----
+  .rd-bb-team {
+    margin-bottom: 12px;
+
+    &:last-child { margin-bottom: 0; }
+
+    &__bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 11px;
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.28);
+      margin-bottom: 6px;
+    }
+
+    &__rank {
+      flex-shrink: 0;
+      width: 16px;
+      text-align: center;
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 13px;
+      color: $gold-bright;
+    }
+
+    &__name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: $font-display;
+      font-weight: 600;
+      font-size: 15px;
+      color: $cream;
+    }
+
+    &__thru {
+      flex-shrink: 0;
+      font-family: $font-mono;
+      font-size: 11px;
+      color: $cream-dim;
+    }
+
+    &__total {
+      flex-shrink: 0;
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 18px;
+      color: $gold-bright;
+
+      i {
+        font-family: $font-ui;
+        font-style: normal;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: $cream-faint;
+        margin-left: 3px;
+      }
+    }
   }
 
   .rd-teamscore {
@@ -322,6 +399,29 @@ $font-mono: 'JetBrains Mono', 'SF Mono', monospace;
       padding: 9px 12px;
       border-radius: 10px;
       background: rgba(6, 18, 11, 0.4);
+
+      &.is-leader {
+        background: rgba(212, 175, 55, 0.12);
+        box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.3) inset;
+      }
+    }
+
+    // Ranked (individual) leaderboard adds a leading position column
+    &--head-ranked,
+    &__row--ranked {
+      grid-template-columns: 20px 30px 1fr auto auto;
+    }
+
+    &__pos {
+      font-family: $font-mono;
+      font-weight: 600;
+      font-size: 12px;
+      color: $cream-dim;
+      text-align: center;
+    }
+
+    &__row.is-leader .rd-leaderboard__pos {
+      color: $gold-bright;
     }
 
     &__avatar {
@@ -907,13 +1007,13 @@ $font-mono: 'JetBrains Mono', 'SF Mono', monospace;
   }
 
   // -------------------------------------------------------------------------
-  // Action bar (fixed above bottom nav)
+  // Action bar (fixed to the bottom — this page has no nav under it)
   // -------------------------------------------------------------------------
   .rd-actionbar {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: env(safe-area-inset-bottom);
     z-index: 50;
     display: flex;
     justify-content: center;

@@ -1,9 +1,10 @@
-import {useEffect, useState, useMemo, useCallback} from 'react';
+import {useEffect, useState, useMemo, useCallback, useRef} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
 import LocalDataService from '../../../services/LocalDataService';
 import type {Round, HoleScore, PlayerScore, AnimalType, AnimalEvent} from '../../../services/LocalDataService';
 import HttpService from '../../../services/HttpService';
 import NumberPicker from '../../../components/NumberPicker';
+import Stepper from '../../../components/Stepper';
 import '../../../styles/Pages/RoundDetail.scss';
 import '../../../styles/Shared/backgrounds.scss';
 import golfBg from '../../../assets/golf-bg.jpg';
@@ -53,6 +54,9 @@ const RoundDetail = () => {
     const [round, setRound] = useState<Round | null>(null);
     const [currentHole, setCurrentHole] = useState(1);
     const [currentScores, setCurrentScores] = useState<Record<number, number>>({});
+    // Per-player debounce so a press-and-hold on the score stepper commits once it
+    // settles rather than firing a state update on every repeated step.
+    const saveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
     const [currentPinkPlayer, setCurrentPinkPlayer] = useState<number | null>(null);
     const [currentAnimalEvents, setCurrentAnimalEvents] = useState<AnimalEvent[]>([]);
     const [isStatusExpanded, setIsStatusExpanded] = useState(false);
@@ -728,6 +732,7 @@ const RoundDetail = () => {
                 if (diff < 0) return `${round.teams[1].name} ${Math.abs(diff)}↑`;
                 return 'All Square';
             }
+            if (isAlliance && allianceTotal !== null) return `Alliance · ${allianceTotal} pts`;
             return 'Scores';
         };
 
@@ -740,13 +745,109 @@ const RoundDetail = () => {
             </svg>
         );
 
-        const secondaryLabel = isStrokePlay ? 'To Par' : 'Pts';
+        const secondaryLabel = isMedal ? 'Net' : isStrokePlay ? 'To Par' : 'Pts';
         const scoredPar = round.scores.reduce((sum, hs) =>
             sum + (round.course.holes.find(h => h.hole_number === hs.holeNumber)?.hole_par || 0), 0);
         const fmtToPar = (strokes: number) => {
             const tp = strokes - scoredPar;
             return tp === 0 ? 'E' : tp > 0 ? `+${tp}` : `${tp}`;
         };
+
+        // The secondary leaderboard value per player: net total (Medal), to-par
+        // (Stroke Play), or Stableford points (everything else)
+        const playerHcp = (pid: number) => round.players.find(p => p.id === pid)?.handicap || 0;
+        const fmtSecondary = (pid: number) => {
+            const t = playerTotals[pid] || {strokes: 0, points: 0};
+            if (isMedal) return `${t.strokes - playerHcp(pid)}`;
+            if (isStrokePlay) return fmtToPar(t.strokes);
+            return `${t.points}`;
+        };
+
+        // Leaderboard ranking — lower net/strokes is better for Medal/Stroke Play,
+        // higher points for everything else. Ties share a position (T2 …).
+        const rankAsc = isMedal || isStrokePlay;
+        const rankValue = (pid: number) => {
+            const t = playerTotals[pid] || {strokes: 0, points: 0};
+            if (isMedal) return t.strokes - playerHcp(pid);
+            if (isStrokePlay) return t.strokes;
+            return t.points;
+        };
+        const sortedPlayers = [...round.players].sort((a, b) =>
+            rankAsc ? rankValue(a.id) - rankValue(b.id) : rankValue(b.id) - rankValue(a.id));
+        const positions: Record<number, number> = {};
+        sortedPlayers.forEach((p, i) => {
+            positions[p.id] = (i > 0 && rankValue(p.id) === rankValue(sortedPlayers[i - 1].id))
+                ? positions[sortedPlayers[i - 1].id]
+                : i + 1;
+        });
+        const showRank = round.scores.length > 0;
+        const isTied = (pid: number) => sortedPlayers.filter(p => positions[p.id] === positions[pid]).length > 1;
+
+        // Four Ball Alliance: team total = sum of best-N points per hole (N by par)
+        const allianceCfg = round.scoring_config?.alliance;
+        const allianceTotal = (isAlliance && allianceCfg)
+            ? round.scores.reduce((sum, hs) => {
+                const par = round.course.holes.find(h => h.hole_number === hs.holeNumber)?.hole_par || 4;
+                const n = par === 3 ? allianceCfg.par3 : par === 5 ? allianceCfg.par5 : allianceCfg.par4;
+                const best = hs.playerScores.map(ps => ps.points).sort((a, b) => b - a).slice(0, n);
+                return sum + best.reduce((s, p) => s + p, 0);
+            }, 0)
+            : null;
+
+        // Betterball/Worst Ball Stableford: rank teams by the sum of the better (or worse)
+        // member Stableford score per hole.
+        if (isTeamStableford && round.teams && round.teams.length > 0) {
+            const bbTeams = round.teams.map(team => {
+                let total = 0;
+                const holes = new Set<number>();
+                round.scores.forEach(hs => {
+                    const teamScores = hs.playerScores.filter(ps => team.playerIds.includes(ps.playerId));
+                    if (teamScores.length > 0) {
+                        const pts = teamScores.map(ps => ps.points);
+                        total += isWorstball ? Math.min(...pts) : Math.max(...pts);
+                        holes.add(hs.holeNumber);
+                    }
+                });
+                return {name: team.name, playerIds: team.playerIds, total, holesPlayed: holes.size};
+            }).sort((a, b) => b.total - a.total);
+
+            const teamLabel = isWorstball ? 'Worst Ball' : 'Betterball';
+            const leaderSummary = bbTeams[0] && bbTeams[0].holesPlayed > 0
+                ? `${bbTeams[0].name} · ${bbTeams[0].total} pts`
+                : teamLabel;
+
+            return (
+                <div className={`rd-status ${isStatusExpanded ? 'is-open' : ''}`}>
+                    <button className="rd-status__toggle" onClick={toggleExpand}>
+                        <span className="rd-status__eyebrow">{teamLabel}</span>
+                        <span className="rd-status__summary">{leaderSummary}</span>
+                        {chevron}
+                    </button>
+                    <div className="rd-status__body">
+                        {bbTeams.map((tm, i) => (
+                            <div key={i} className="rd-bb-team">
+                                <div className="rd-bb-team__bar">
+                                    <span className="rd-bb-team__rank">{tm.holesPlayed > 0 ? i + 1 : '–'}</span>
+                                    <span className="rd-bb-team__name">{tm.name}</span>
+                                    <span className="rd-bb-team__thru">{tm.holesPlayed}/{round.course.holes.length}</span>
+                                    <span className="rd-bb-team__total">{tm.total}<i>pts</i></span>
+                                </div>
+                                <div className="rd-leaderboard">
+                                    {round.players.filter(p => tm.playerIds.includes(p.id)).map(p => (
+                                        <div key={p.id} className="rd-leaderboard__row">
+                                            <span className="rd-leaderboard__avatar">{getInitials(p.name)}</span>
+                                            <span className="rd-leaderboard__name">{p.name}</span>
+                                            <span className="rd-leaderboard__strokes">{playerTotals[p.id]?.strokes || 0}</span>
+                                            <span className="rd-leaderboard__secondary">{playerTotals[p.id]?.points || 0}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
 
         if (round.format === 'teams' && teamTotals && round.teams && teamTotals.length === 2) {
             const diff = teamTotals[0].holesWon - teamTotals[1].holesWon;
@@ -816,26 +917,36 @@ const RoundDetail = () => {
         return (
             <div className={`rd-status ${isStatusExpanded ? 'is-open' : ''}`}>
                 <button className="rd-status__toggle" onClick={toggleExpand}>
-                    <span className="rd-status__eyebrow">Leaderboard</span>
-                    <span className="rd-status__summary">{round.players.length} players · {round.scores.length}/18</span>
+                    <span className="rd-status__eyebrow">{isAlliance ? 'Alliance' : 'Leaderboard'}</span>
+                    <span className="rd-status__summary">{getStatusSummary() === 'Scores' ? `${round.players.length} players · ${round.scores.length}/18` : getStatusSummary()}</span>
                     {chevron}
                 </button>
 
                 <div className="rd-status__body">
-                    <div className="rd-leaderboard rd-leaderboard--head">
+                    {isAlliance && allianceTotal !== null && (
+                        <div className="rd-match-banner leading">
+                            Alliance total · {allianceTotal} pts
+                            {allianceCfg && (
+                                <span className="rd-alliance-cfg"> · best {allianceCfg.par3}/{allianceCfg.par4}/{allianceCfg.par5} count (par 3/4/5)</span>
+                            )}
+                        </div>
+                    )}
+                    <div className="rd-leaderboard rd-leaderboard--head rd-leaderboard--head-ranked">
+                        <span className="rd-leaderboard__pos" />
                         <span className="rd-leaderboard__avatar" />
                         <span className="rd-leaderboard__name">Player</span>
                         <span className="rd-leaderboard__strokes">Strokes</span>
                         <span className="rd-leaderboard__secondary">{secondaryLabel}</span>
                     </div>
-                    {round.players.map(player => (
-                        <div key={player.id} className="rd-leaderboard__row">
+                    {sortedPlayers.map(player => (
+                        <div key={player.id} className={`rd-leaderboard__row rd-leaderboard__row--ranked ${showRank && positions[player.id] === 1 ? 'is-leader' : ''}`}>
+                            <span className="rd-leaderboard__pos">
+                                {showRank ? `${isTied(player.id) ? 'T' : ''}${positions[player.id]}` : ''}
+                            </span>
                             <span className="rd-leaderboard__avatar">{getInitials(player.name)}</span>
                             <span className="rd-leaderboard__name">{player.name}</span>
                             <span className="rd-leaderboard__strokes">{playerTotals[player.id]?.strokes || 0}</span>
-                            <span className="rd-leaderboard__secondary">
-                                {isStrokePlay ? fmtToPar(playerTotals[player.id]?.strokes || 0) : (playerTotals[player.id]?.points || 0)}
-                            </span>
+                            <span className="rd-leaderboard__secondary">{fmtSecondary(player.id)}</span>
                         </div>
                     ))}
                 </div>
@@ -846,11 +957,12 @@ const RoundDetail = () => {
     const handleScoreChange = (playerId: number, value: number) => {
         setCurrentScores(prev => ({...prev, [playerId]: value}));
 
-        // Auto-save when a valid score is entered
+        // Auto-save when a valid score is entered (debounced per player)
         if (value > 0 && currentHoleData) {
-            // Use a timeout to batch rapid changes
-            setTimeout(() => {
+            if (saveTimers.current[playerId]) clearTimeout(saveTimers.current[playerId]);
+            saveTimers.current[playerId] = setTimeout(() => {
                 autoSaveScore(playerId, value);
+                delete saveTimers.current[playerId];
             }, 300);
         }
     };
@@ -1103,6 +1215,13 @@ const RoundDetail = () => {
         (name || '').split(' ').filter(Boolean).map(p => p.charAt(0)).slice(0, 2).join('').toUpperCase() || '?';
 
     const isStrokePlay = round.scoring_method.id === 1;
+    const isMedal = round.scoring_method.id === 7;       // net stroke play
+    const isAlliance = round.scoring_method.id === 8 || round.scoring_method.id === 11; // 4-ball or 2-ball alliance
+    const isBetterball = round.scoring_method.id === 9;  // teams of 1-2, better ball per hole
+    const isWorstball = round.scoring_method.id === 10;  // teams of 1-2, worst ball per hole
+    const isTeamStableford = isBetterball || isWorstball;
+    // Medal & Stroke Play both enter raw strokes and show to-par per hole (no points)
+    const isStrokeStyle = isStrokePlay || isMedal;
 
     const renderAnimalToggles = (playerId: number) => {
         if (!isAnimalScoring) return null;
@@ -1154,15 +1273,15 @@ const RoundDetail = () => {
                 {renderAnimalToggles(player.id)}
 
                 <div className="rd-player__score">
-                    <NumberPicker
+                    <Stepper
                         value={currentScores[player.id]}
                         placeholder={currentHoleData?.hole_par}
                         min={1}
                         max={15}
                         onChange={(val) => handleScoreChange(player.id, val)}
-                        label={player.name}
+                        ariaLabel={`shots for ${player.name}`}
                     />
-                    {isStrokePlay ? (
+                    {isStrokeStyle ? (
                         <div className={`rd-stat rd-stat--topar ${toParClass}`}>
                             <span className="rd-stat__num">{strokes > 0 ? toParLabel : '–'}</span>
                             <span className="rd-stat__lbl">To Par</span>

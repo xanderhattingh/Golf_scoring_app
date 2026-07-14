@@ -12,16 +12,20 @@ export default class HttpService {
             timeout: 30000,
         });
 
-        // Add response interceptor to handle 401 errors
+        // Add response interceptor to handle 401 errors — treat as "session expired"
+        // for authenticated requests, but leave auth endpoints alone so the caller
+        // (login/register/password) can surface the real error to the user.
         this.instance.interceptors.response.use(
             (response: AxiosResponse) => response,
             (error: AxiosError) => {
                 if (error.response?.status === 401) {
-                    // Clear stored user data
-                    const storage = new StorageService();
-                    storage.clear();
-                    // Redirect to login
-                    window.location.href = '/login';
+                    const url = (error.config?.url || '').replace(/^\/+/, '');
+                    const isAuthEndpoint = /^(login|register(\/|$)|password\/(forgot|reset))/.test(url);
+                    if (!isAuthEndpoint) {
+                        const storage = new StorageService();
+                        storage.clear();
+                        window.location.href = '/login';
+                    }
                 }
                 return Promise.reject(error);
             }

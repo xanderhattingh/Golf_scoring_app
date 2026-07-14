@@ -265,6 +265,14 @@ $text-secondary: #a8c9a8;
   }
 }
 
+// Desktop has a fixed top nav bar (66px) — clear it so page content isn't hidden underneath
+@media screen and (min-width: 769px) {
+  .page-with-background {
+    padding-top: 66px;
+    padding-bottom: unset;
+  }
+}
+
 
 html, body {
   overflow: hidden;
